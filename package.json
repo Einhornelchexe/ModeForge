@@ -1,0 +1,33 @@
+{
+  "name": "modeforge",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Browser-local laser beamline physics core and static ModeForge workbench.",
+  "workspaces": [
+    "packages/*",
+    "apps/*"
+  ],
+  "scripts": {
+    "test": "node --test tests/unit/*.test.ts",
+    "test:unit": "node --test tests/unit/*.test.ts",
+    "typecheck": "tsc -p tsconfig.base.json --noEmit",
+    "typecheck:web": "tsc -p apps/web/tsconfig.json --noEmit",
+    "check:scope": "node scripts/check-scope.mjs",
+    "run:headless": "node scripts/run-headless.mjs",
+    "verify:headless": "node scripts/verify-headless.mjs",
+    "verify:cases": "node scripts/verify-reference-cases.mjs",
+    "dev:web": "vite apps/web --host 127.0.0.1 --port 5173",
+    "build:web": "vite build apps/web"
+  },
+  "engines": {
+    "node": ">=24"
+  },
+  "devDependencies": {
+    "@fontsource/ibm-plex-mono": "^5.2.7",
+    "@fontsource/space-grotesk": "^5.2.10",
+    "@types/node": "^26.1.0",
+    "typescript": "^6.0.3",
+    "vite": "^8.1.3"
+  }
+}

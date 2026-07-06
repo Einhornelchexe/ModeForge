@@ -1,0 +1,40 @@
+{
+  "kind": "field-beamline",
+  "input": {
+    "beamline": {
+      "version": "0.1",
+      "beam": {
+        "kind": "gaussian",
+        "wavelengthUm": 1.064,
+        "waistRadiusMm": 0.18,
+        "waistPositionMm": 0
+      },
+      "components": [
+        {
+          "id": "pre",
+          "kind": "free-space",
+          "lengthMm": 20
+        },
+        {
+          "id": "focus-lens",
+          "kind": "thin-lens",
+          "focalLengthMm": 60,
+          "apertureRadiusMm": 4
+        },
+        {
+          "id": "image-plane",
+          "kind": "free-space",
+          "lengthMm": 40
+        }
+      ]
+    },
+    "grid": {
+      "nx": 33,
+      "ny": 33,
+      "dxMm": 0.025,
+      "dyMm": 0.025
+    },
+    "method": "fresnel",
+    "includePlanes": true
+  }
+}

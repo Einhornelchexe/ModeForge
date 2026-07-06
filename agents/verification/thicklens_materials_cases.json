@@ -1,0 +1,291 @@
+{
+  "domain": "thicklens-materials",
+  "cases": [
+    {
+      "id": "nbk7_n_5876",
+      "description": "Refractive index of N-BK7 at 0.5876 µm (d-line).",
+      "target": "refractiveIndex",
+      "inputs": {
+        "material": {
+          "id": "schott_n_bk7",
+          "formula": "sellmeier",
+          "coefficients": [
+            1.03961212,
+            0.00600069867,
+            0.231792344,
+            0.0200179144,
+            1.01046945,
+            103.560653
+          ]
+        },
+        "wavelengthUm": 0.5876
+      },
+      "expected": {
+        "n": 1.5168
+      },
+      "toleranceRel": 5e-06,
+      "derivation": "Sellmeier equation with published Schott coefficients; verified against Schott data sheet (n_d = 1.51680).",
+      "triage": "Manager 2026-07-04: Referenzwert ist der auf 6 Stellen gerundete Datenblattwert; Core-Sellmeier weicht <4e-6 relativ ab und rundet exakt auf den Datenblattwert. Toleranz von 1e-6 auf 5e-6 angepasst."
+    },
+    {
+      "id": "fused_silica_n_5876",
+      "description": "Refractive index of Fused Silica at 0.5876 µm.",
+      "target": "refractiveIndex",
+      "inputs": {
+        "material": {
+          "id": "fused_silica",
+          "formula": "sellmeier",
+          "coefficients": [
+            0.6961663,
+            0.00467914826,
+            0.4079426,
+            0.0135120631,
+            0.8974794,
+            97.9340025
+          ]
+        },
+        "wavelengthUm": 0.5876
+      },
+      "expected": {
+        "n": 1.45846
+      },
+      "toleranceRel": 5e-06,
+      "derivation": "Sellmeier equation with Malitson coefficients; verified against published value n_d ≈ 1.45846.",
+      "triage": "Manager 2026-07-04: Referenzwert ist der auf 6 Stellen gerundete Datenblattwert; Core-Sellmeier weicht <4e-6 relativ ab und rundet exakt auf den Datenblattwert. Toleranz von 1e-6 auf 5e-6 angepasst."
+    },
+    {
+      "id": "nbk7_n_1064",
+      "description": "Refractive index of N-BK7 at 1.064 µm (Nd:YAG).",
+      "target": "refractiveIndex",
+      "inputs": {
+        "material": {
+          "id": "schott_n_bk7",
+          "formula": "sellmeier",
+          "coefficients": [
+            1.03961212,
+            0.00600069867,
+            0.231792344,
+            0.0200179144,
+            1.01046945,
+            103.560653
+          ]
+        },
+        "wavelengthUm": 1.064
+      },
+      "expected": {
+        "n": 1.50664
+      },
+      "toleranceRel": 5e-06,
+      "derivation": "Sellmeier equation evaluated at λ=1.064, λ²=1.132096; sum of terms yields n²≈2.26995, n≈1.50664.",
+      "triage": "Manager 2026-07-04: Referenzwert ist der auf 6 Stellen gerundete Datenblattwert; Core-Sellmeier weicht <4e-6 relativ ab und rundet exakt auf den Datenblattwert. Toleranz von 1e-6 auf 5e-6 angepasst."
+    },
+    {
+      "id": "fused_silica_n_405",
+      "description": "Refractive index of Fused Silica at 0.405 µm.",
+      "target": "refractiveIndex",
+      "inputs": {
+        "material": {
+          "id": "fused_silica",
+          "formula": "sellmeier",
+          "coefficients": [
+            0.6961663,
+            0.00467914826,
+            0.4079426,
+            0.0135120631,
+            0.8974794,
+            97.9340025
+          ]
+        },
+        "wavelengthUm": 0.405
+      },
+      "expected": {
+        "n": 1.46958
+      },
+      "toleranceRel": 1e-06,
+      "derivation": "Sellmeier equation evaluated at λ=0.405, λ²=0.164025; n²≈2.159672, n≈1.46958."
+    },
+    {
+      "id": "biconvex_thick_efl",
+      "description": "Effective focal length of a biconvex thick lens (R1=50, R2=-50, t=5, n=1.5) in air.",
+      "target": "paraxialCard",
+      "inputs": {
+        "stack": {
+          "id": "test-biconvex",
+          "source": "manual",
+          "surfaces": [
+            {
+              "radiusMm": 50,
+              "thicknessAfterMm": 5,
+              "materialAfter": "LENS",
+              "refractiveIndexAfter": 1.5
+            },
+            {
+              "radiusMm": -50,
+              "thicknessAfterMm": 0,
+              "materialAfter": "AIR",
+              "refractiveIndexAfter": 1.0
+            }
+          ],
+          "warnings": []
+        },
+        "nBefore": 1
+      },
+      "expected": {
+        "effectiveFocalLengthMm": 50.84745762711864
+      },
+      "toleranceRel": 1e-10,
+      "derivation": "Lensmaker's thick lens equation: 1/f = (n-1)[1/R1 - 1/R2 + (n-1)t/(n R1 R2)] = 0.5*(0.04 - 1/1500) = 59/3000, so f = 3000/59 ≈ 50.8474576271."
+    },
+    {
+      "id": "biconvex_thick_bfl",
+      "description": "Back focal length of the same biconvex thick lens.",
+      "target": "paraxialCard",
+      "inputs": {
+        "stack": {
+          "id": "test-biconvex",
+          "source": "manual",
+          "surfaces": [
+            {
+              "radiusMm": 50,
+              "thicknessAfterMm": 5,
+              "materialAfter": "LENS",
+              "refractiveIndexAfter": 1.5
+            },
+            {
+              "radiusMm": -50,
+              "thicknessAfterMm": 0,
+              "materialAfter": "AIR",
+              "refractiveIndexAfter": 1.0
+            }
+          ],
+          "warnings": []
+        },
+        "nBefore": 1
+      },
+      "expected": {
+        "backFocalLengthMm": 49.15254237288136
+      },
+      "toleranceRel": 1e-10,
+      "derivation": "BFL = f * [1 - (n-1)t/(n R1)] = (3000/59) * (29/30) = 2900/59 ≈ 49.15254237."
+    },
+    {
+      "id": "biconvex_thick_ffl",
+      "description": "Front focal length (signed distance from first surface) of the biconvex lens using the code's D/C formula.",
+      "target": "paraxialCard",
+      "inputs": {
+        "stack": {
+          "id": "test-biconvex",
+          "source": "manual",
+          "surfaces": [
+            {
+              "radiusMm": 50,
+              "thicknessAfterMm": 5,
+              "materialAfter": "LENS",
+              "refractiveIndexAfter": 1.5
+            },
+            {
+              "radiusMm": -50,
+              "thicknessAfterMm": 0,
+              "materialAfter": "AIR",
+              "refractiveIndexAfter": 1.0
+            }
+          ],
+          "warnings": []
+        },
+        "nBefore": 1
+      },
+      "expected": {
+        "frontFocalLengthMm": -49.15254237288136
+      },
+      "toleranceRel": 1e-10,
+      "derivation": "From system matrix: D = 1 + (n-1)t/(n R2) = 29/30, C = -1/f = -59/3000, so FFL = D/C = -2900/59 ≈ -49.15254237. The negative sign indicates the front focal point is 49.15 mm to the left of the first surface."
+    },
+    {
+      "id": "planoconvex_thick_efl",
+      "description": "Effective focal length of a plano-convex thick lens (R1=Infinity, R2=-50, t=5, n=1.5).",
+      "target": "paraxialCard",
+      "inputs": {
+        "stack": {
+          "id": "test-planoconvex",
+          "source": "manual",
+          "surfaces": [
+            {
+              "radiusMm": "Infinity",
+              "thicknessAfterMm": 5,
+              "materialAfter": "LENS",
+              "refractiveIndexAfter": 1.5
+            },
+            {
+              "radiusMm": -50,
+              "thicknessAfterMm": 0,
+              "materialAfter": "AIR",
+              "refractiveIndexAfter": 1.0
+            }
+          ],
+          "warnings": []
+        },
+        "nBefore": 1
+      },
+      "expected": {
+        "effectiveFocalLengthMm": 100.0
+      },
+      "toleranceRel": 1e-10,
+      "derivation": "Lensmaker's equation with R1=Infinity simplifies to 1/f = (n-1)*(-1/R2) = 0.5 * (1/50) = 0.01 → f=100 mm."
+    },
+    {
+      "id": "plane_window_matrix",
+      "description": "Surface stack matrix for a plane-parallel window (R1=Infinity, R2=Infinity, t=10, n=1.5) in air.",
+      "target": "surfaceStackMatrix",
+      "inputs": {
+        "stack": {
+          "id": "test-window",
+          "source": "manual",
+          "surfaces": [
+            {
+              "radiusMm": "Infinity",
+              "thicknessAfterMm": 10,
+              "materialAfter": "GLASS",
+              "refractiveIndexAfter": 1.5
+            },
+            {
+              "radiusMm": "Infinity",
+              "thicknessAfterMm": 0,
+              "materialAfter": "AIR",
+              "refractiveIndexAfter": 1.0
+            }
+          ],
+          "warnings": []
+        },
+        "nBefore": 1
+      },
+      "expected": {
+        "a": 1,
+        "b": 6.666666666666667,
+        "c": 0,
+        "d": 1
+      },
+      "toleranceRel": 1e-10,
+      "derivation": "The system matrix is [1 0; 0 n] * [1 t; 0 1] * [1 0; 0 1/n] = [1 t/n; 0 1]. With t=10, n=1.5, B = 10/1.5 = 6.666... C=0 → afocal."
+    },
+    {
+      "id": "air_gvd",
+      "description": "Group velocity dispersion of air (constant-n material) must be zero.",
+      "target": "gvdFs2PerMm",
+      "inputs": {
+        "material": {
+          "id": "air",
+          "formula": "constant-n",
+          "coefficients": [
+            1.0
+          ]
+        },
+        "wavelengthUm": 0.5876
+      },
+      "expected": {
+        "gvdFs2PerMm": 0
+      },
+      "toleranceRel": 0,
+      "derivation": "For constant refractive index, d²n/dλ² = 0, so GVD = 0. Code branch for 'constant-n' returns 0."
+    }
+  ]
+}

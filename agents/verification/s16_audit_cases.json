@@ -1,0 +1,144 @@
+{
+  "domain": "s16-audit",
+  "cases": [
+    {
+      "id": "sag-pos",
+      "description": "Exact spherical sag for a positive radius. R = 50 mm, r = 1.000 mm.",
+      "target": "s16SagPhase",
+      "inputs": {
+        "radiusMm": 50,
+        "rMm": 1.0
+      },
+      "expected": 0.0100010002,
+      "toleranceRel": 1e-09,
+      "derivation": "Sag = R – sqrt(R² – r²). Series: r²/(2R) + r⁴/(8R³) + r⁶/(16R⁵) + … = 0.01 + 1e-6 + 2e-10 + … ≈ 0.0100010002 mm."
+    },
+    {
+      "id": "sag-neg",
+      "description": "Exact spherical sag for a negative radius. R = -50 mm, r = 1.000 mm.",
+      "target": "s16SagPhase",
+      "inputs": {
+        "radiusMm": -50,
+        "rMm": 1.0
+      },
+      "expected": -0.0100010002,
+      "toleranceRel": 1e-09,
+      "derivation": "For R<0, the same sag magnitude (negative sign). Formula R – sign(R)*√(R²–r²) yields –r²/(2|R|) – higher terms = –0.0100010002 mm."
+    },
+    {
+      "id": "thin-lens-phase",
+      "description": "Phase applied by a thin lens at an off‑axis point. f = 100 mm, x = 0.100 mm, λ = 0.500 µm.",
+      "target": "s16ThinLensPhase",
+      "inputs": {
+        "focalLengthMm": 100,
+        "xMm": 0.1,
+        "wavelengthUm": 0.5,
+        "axis": "both"
+      },
+      "expected": -0.6283185307,
+      "toleranceRel": 1e-10,
+      "derivation": "phase = –π x² / (λ f). λ = 0.0005 mm, so π·0.01 / (0.0005·100) = 0.2π = 0.6283185307 rad, with a negative sign per convention."
+    },
+    {
+      "id": "sampling-guard-threshold",
+      "description": "Largest radius r on a spherical surface where the local phase step stays ≤ π rad. λ = 0.5 µm, dx = 0.001 mm, R = 20 mm, |Δn| = 0.5.",
+      "target": "s16GuardThreshold",
+      "inputs": {
+        "lambdaUm": 0.5,
+        "dxMm": 0.001,
+        "Rmm": 20,
+        "deltaN": 0.5
+      },
+      "expected": 8.94427191,
+      "toleranceRel": 1e-08,
+      "derivation": "k₀ = 2π/λ. Condition (k₀·|Δn|·r / √(R²–r²))·dx = π → 6.283185·r/√(400–r²) = 3.14159 → r/√(400–r²)=0.5 → r²=80 → r=√80 mm."
+    },
+    {
+      "id": "thick-lens-efl",
+      "description": "Effective focal length of a thick spherical lens. R1 = 50 mm, R2 = –50 mm, centre thickness 5 mm, n = 1.5.",
+      "target": "s16ThickLensEfl",
+      "inputs": {
+        "R1Mm": 50,
+        "R2Mm": -50,
+        "thicknessMm": 5,
+        "n": 1.5
+      },
+      "expected": 50.8474576,
+      "toleranceRel": 1e-06,
+      "derivation": "1/f = (n-1)[1/R1 – 1/R2] + (n-1)²·t/(n·R1·R2)  → f = (n·R1·R2) / ((n-1)[(n-1)t + n(R2–R1)]) = (1.5·50·–50) / (0.5·[2.5 – 150]) = –3750 / –73.75 = 50.8474576 mm."
+    },
+    {
+      "id": "probe-after-aperture-power",
+      "description": "Power transmitted by a circular aperture of radius 0.2 mm placed 10 mm after the waist of a Gaussian beam (w₀ = 0.3 mm, λ = 1.064 µm). At z=10 mm the beam radius is essentially w₀. A probe exactly at the aperture should capture the clipped field.",
+      "target": "s16ProbeAfterAperture",
+      "inputs": {
+        "beam": {
+          "kind": "gaussian",
+          "waistRadiusMm": 0.3,
+          "waistPositionMm": 0,
+          "wavelengthUm": 1.064
+        },
+        "components": [
+          {
+            "id": "d1",
+            "kind": "free-space",
+            "lengthMm": 10
+          },
+          {
+            "id": "ap",
+            "kind": "aperture",
+            "apertureRadiusMm": 0.2
+          }
+        ],
+        "probesZmm": [
+          10
+        ],
+        "gridN": 128,
+        "gridDxMm": 0.012
+      },
+      "expected": 0.588831,
+      "toleranceRel": 0.02,
+      "derivation": "Transmission T = 1 – exp(–2R²/w²) = 1 – exp(–2·0.04/0.09) = 1 – exp(–0.888889) = 1 – 0.411169 = 0.588831. (The discrete sampled power will approach this value on a fine grid; tolerance accounts for discretisation.)"
+    },
+    {
+      "id": "fft-dc-uniform",
+      "description": "Forward 2D DFT of an 8×8 uniform field (all ones) yields the DC bin value.",
+      "target": "s16Dft2Dc",
+      "inputs": {
+        "nx": 8,
+        "ny": 8,
+        "real": "all 1",
+        "imag": "all 0"
+      },
+      "expected": {
+        "dcReal": 8.0
+      },
+      "toleranceRel": 1e-12,
+      "derivation": "Unitary normalisation 1/√(nx·ny) gives DC = (nx·ny)/√(nx·ny) = √64 = 8. Imag part exactly 0 because input is purely real and completely symmetric. (Imaginary DC part is numerically ~1e-16 and asserted separately in unit tests.)"
+    },
+    {
+      "id": "surface-stack-optical-path",
+      "description": "Total optical path (reduced length) through a three‑surface stack. Surfaces: (t=5mm, n=1.5), (t=2mm, n=1.4), (t=0mm, n=1.0).",
+      "target": "s16StackReducedPath",
+      "inputs": {
+        "surfaces": [
+          {
+            "thicknessAfterMm": 5,
+            "refractiveIndexAfter": 1.5
+          },
+          {
+            "thicknessAfterMm": 2,
+            "refractiveIndexAfter": 1.4
+          },
+          {
+            "thicknessAfterMm": 0,
+            "refractiveIndexAfter": 1.0
+          }
+        ]
+      },
+      "expected": 4.76190476,
+      "toleranceRel": 1e-08,
+      "derivation": "Σ tᵢ/nᵢ = 5/1.5 + 2/1.4 = 3.33333333 + 1.42857143 = 4.76190476 mm. Physical length = 7 mm."
+    }
+  ]
+}

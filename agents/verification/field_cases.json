@@ -1,0 +1,213 @@
+{
+  "domain": "field",
+  "cases": [
+    {
+      "id": "aperture_transmission_a0.5",
+      "description": "Power transmission of circular aperture on a Gaussian beam with waist radius w=1 mm and aperture radius a=0.5 mm (a/w=0.5).",
+      "target": "applyCircularAperture / fieldPower",
+      "inputs": {
+        "field": {
+          "nx": 256,
+          "ny": 256,
+          "dxMm": 0.02,
+          "dyMm": 0.02,
+          "wavelengthUm": 1.0,
+          "waistRadiusMm": 1.0
+        },
+        "apertureRadiusMm": 0.5
+      },
+      "expected": {
+        "transmission": 0.3934693
+      },
+      "toleranceRel": 0.006,
+      "derivation": "T = 1 - exp(-2a²/w²) with a/w=0.5 => 1 - exp(-0.5) ≈ 0.3934693.",
+      "triage": "Manager 2026-07-04: harte Blende auf dx=0.02-Gitter; Verfeinerungstest dx 0.02/0.01/0.005 -> T 0.39541/0.39370/0.39359 konvergiert monoton gegen analytisch 0.3934693. Toleranz von 0.001 auf 0.006 angepasst (Diskretisierung, kein Formelfehler)."
+    },
+    {
+      "id": "aperture_transmission_a1.0",
+      "description": "Power transmission for a/w=1.0 (a=1.0 mm, w=1.0 mm).",
+      "target": "applyCircularAperture / fieldPower",
+      "inputs": {
+        "field": {
+          "nx": 256,
+          "ny": 256,
+          "dxMm": 0.02,
+          "dyMm": 0.02,
+          "wavelengthUm": 1.0,
+          "waistRadiusMm": 1.0
+        },
+        "apertureRadiusMm": 1.0
+      },
+      "expected": {
+        "transmission": 0.8646647
+      },
+      "toleranceRel": 0.001,
+      "derivation": "T = 1 - exp(-2) ≈ 0.8646647."
+    },
+    {
+      "id": "aperture_transmission_a1.5",
+      "description": "Power transmission for a/w=1.5 (a=1.5 mm, w=1.0 mm).",
+      "target": "applyCircularAperture / fieldPower",
+      "inputs": {
+        "field": {
+          "nx": 256,
+          "ny": 256,
+          "dxMm": 0.02,
+          "dyMm": 0.02,
+          "wavelengthUm": 1.0,
+          "waistRadiusMm": 1.0
+        },
+        "apertureRadiusMm": 1.5
+      },
+      "expected": {
+        "transmission": 0.988891
+      },
+      "toleranceRel": 0.001,
+      "derivation": "T = 1 - exp(-4.5) = 1 - exp(-2*(1.5)²) ≈ 0.9888910."
+    },
+    {
+      "id": "fresnel_moment_radius",
+      "description": "Free-space propagation of a Gaussian beam (w0=0.3 mm, λ=1.064 µm) over z=150 mm; verify second-moment radius matches analytic.",
+      "target": "propagateFresnel + fieldMomentRadii",
+      "inputs": {
+        "field": {
+          "nx": 256,
+          "ny": 256,
+          "dxMm": 0.02,
+          "dyMm": 0.02,
+          "wavelengthUm": 1.064,
+          "waistRadiusMm": 0.3
+        },
+        "distanceMm": 150
+      },
+      "expected": {
+        "radiusXmm": 0.34449430572825,
+        "radiusYmm": 0.34449430572825
+      },
+      "toleranceRel": 0.02,
+      "derivation": "zR = π w0²/λ ≈ 265.736 mm. w(z) = w0·√(1+(z/zR)²) ≈ 0.344494 mm. Moment radius (2σ) = √2·w(z) ≈ 0.4871886 mm.",
+      "triage": "Manager 2026-07-04: Worker-Werte {'radiusXmm': 0.4871886, 'radiusYmm': 0.4871886} lagen exakt um Faktor sqrt(2) zu hoch (sigma/w-Konventionsfehler); analytisch w(z)=0.3*sqrt(1+(150*1.064e-3/(pi*0.09))^2)=0.344494 mm, Core stimmt exakt ueberein."
+    },
+    {
+      "id": "power_conservation_fresnel",
+      "description": "Verify that field power is conserved during Fresnel propagation.",
+      "target": "propagateFresnel power conservation",
+      "inputs": {
+        "field": {
+          "nx": 128,
+          "ny": 128,
+          "dxMm": 0.05,
+          "dyMm": 0.05,
+          "wavelengthUm": 0.633,
+          "waistRadiusMm": 0.5
+        },
+        "distanceMm": 100
+      },
+      "expected": {
+        "powerRatio": 1.0
+      },
+      "toleranceRel": 1e-12,
+      "derivation": "Unitary DFT (norm = 1/√(nx·ny)) and pure phase transfer function preserve sum(|E|²) exactly. Multiplication by dx·dy is constant, so power ratio is 1."
+    },
+    {
+      "id": "power_conservation_angular_spectrum",
+      "description": "Verify that field power is conserved during angular-spectrum propagation (evanescent content negligible).",
+      "target": "propagateAngularSpectrum power conservation",
+      "inputs": {
+        "field": {
+          "nx": 128,
+          "ny": 128,
+          "dxMm": 0.05,
+          "dyMm": 0.05,
+          "wavelengthUm": 0.633,
+          "waistRadiusMm": 0.5
+        },
+        "distanceMm": 100
+      },
+      "expected": {
+        "powerRatio": 1.0
+      },
+      "toleranceRel": 1e-12,
+      "derivation": "Angular-spectrum kernel multiplies by a unit-magnitude factor for propagating waves; evanescent waves are damped but their initial power is negligible for this well-resolved Gaussian."
+    },
+    {
+      "id": "cylindrical_lens_x_moment_radii",
+      "description": "Apply a cylindrical thin lens (axis=x, f=100 mm) to a Gaussian (w0=0.3 mm, λ=1.064 µm) at waist and propagate 100 mm; verify x and y radii differ as predicted.",
+      "target": "applyThinLensPhase (axis=x) + propagateFresnel + fieldMomentRadii",
+      "inputs": {
+        "field": {
+          "nx": 256,
+          "ny": 256,
+          "dxMm": 0.02,
+          "dyMm": 0.02,
+          "wavelengthUm": 1.064,
+          "waistRadiusMm": 0.3
+        },
+        "lensFocalLengthMm": 100,
+        "lensAxis": "x",
+        "propagateDistanceMm": 100
+      },
+      "expected": {
+        "radiusXmm": 0.11288676918930757,
+        "radiusYmm": 0.32053150391186197
+      },
+      "toleranceRel": 0.05,
+      "derivation": "For x: q0 = i·zR, after lens qx = q0/(1 - q0/f), after propagation qx_out = qx + z. wx = √(λ/(π·Im(-1/qx_out))) ≈ 0.1129 mm, rx = √2·wx ≈ 0.15965 mm. For y (no lens): ry = √2·w0·√(1+(z/zR)²) ≈ 0.45330 mm.",
+      "triage": "Manager 2026-07-04: gleicher sqrt(2)-Konventionsfehler wie fresnel_moment_radius; Worker-Werte {'radiusXmm': 0.159646, 'radiusYmm': 0.4533} durch sqrt(2) geteilt — stimmen dann auf <3e-5 mit dem Core ueberein (Toleranz 0.05 fuer Diskretisierung)."
+    },
+    {
+      "id": "sampling_warning_coarse_spacing",
+      "description": "Trigger FIELD_SAMPLING_LOW warning when grid spacing exceeds beam radius / 4.",
+      "target": "fieldSamplingWarnings",
+      "inputs": {
+        "field": {
+          "nx": 64,
+          "ny": 64,
+          "dxMm": 0.3,
+          "dyMm": 0.3,
+          "wavelengthUm": 1.0,
+          "waistRadiusMm": 1.0
+        },
+        "beamRadiusMm": 1.0
+      },
+      "expected": {
+        "warnings": [
+          {
+            "code": "FIELD_SAMPLING_LOW",
+            "message": "Grid spacing is coarse relative to the beam radius.",
+            "severity": "warning"
+          }
+        ]
+      },
+      "toleranceRel": 0,
+      "derivation": "max(dx,dy) = 0.3 mm > beamRadius/4 = 0.25 mm triggers the spacing warning."
+    },
+    {
+      "id": "sampling_warning_small_extent",
+      "description": "Trigger FIELD_SAMPLING_LOW warning when grid half-extent is less than 3 × beam radius.",
+      "target": "fieldSamplingWarnings",
+      "inputs": {
+        "field": {
+          "nx": 10,
+          "ny": 10,
+          "dxMm": 0.1,
+          "dyMm": 0.1,
+          "wavelengthUm": 1.0,
+          "waistRadiusMm": 1.0
+        },
+        "beamRadiusMm": 1.0
+      },
+      "expected": {
+        "warnings": [
+          {
+            "code": "FIELD_SAMPLING_LOW",
+            "message": "Grid extent is small relative to the beam radius.",
+            "severity": "warning"
+          }
+        ]
+      },
+      "toleranceRel": 0,
+      "derivation": "Half-extent = (10×0.1)/2 = 0.5 mm < 3×1.0 = 3.0 mm triggers the extent warning."
+    }
+  ]
+}

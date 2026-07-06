@@ -1,0 +1,5 @@
+{
+  "kind": "zmx-import",
+  "wavelengthUm": 0.5876,
+  "text": "SURF 1\nRADIUS 50\nDISZ 5\nGLAS N-BK7\nDIAM 12\nSURF 2\nRADIUS -50\nDISZ 0\nGLAS AIR\nDIAM 12\n"
+}

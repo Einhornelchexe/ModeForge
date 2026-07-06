@@ -1,0 +1,32 @@
+{
+  "version": "0.1",
+  "beam": {
+    "kind": "gaussian",
+    "wavelengthUm": 1.064,
+    "waistRadiusMm": 0.3,
+    "waistPositionMm": 0,
+    "powerW": 0.5
+  },
+  "beamline": [
+    {
+      "id": "drift-1",
+      "kind": "free-space",
+      "lengthMm": 20
+    },
+    {
+      "id": "DBL1",
+      "kind": "surface-stack",
+      "name": "cemented doublet (ZMX sample)",
+      "surfaces": [
+        { "radiusMm": 62.75, "thicknessAfterMm": 4, "refractiveIndexAfter": 1.8, "apertureRadiusMm": 12.7, "materialAfter": "S-LAH64" },
+        { "radiusMm": -45.71, "thicknessAfterMm": 2.5, "refractiveIndexAfter": 1.74, "apertureRadiusMm": 12.7, "materialAfter": "N-SF11" },
+        { "radiusMm": -128.23, "thicknessAfterMm": 0, "refractiveIndexAfter": 1, "apertureRadiusMm": 12.7, "materialAfter": "AIR" }
+      ]
+    },
+    {
+      "id": "to-image",
+      "kind": "free-space",
+      "lengthMm": 60
+    }
+  ]
+}

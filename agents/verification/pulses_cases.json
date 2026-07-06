@@ -1,0 +1,176 @@
+{
+  "domain": "pulses",
+  "cases": [
+    {
+      "id": "pulse_energy_from_avg_power",
+      "description": "Pulse energy from average power 1 W at 1 kHz",
+      "target": "pulseEnergyJ",
+      "inputs": {
+        "averagePowerW": 1,
+        "repetitionRateHz": 1000
+      },
+      "expected": {
+        "value": 0.001
+      },
+      "toleranceRel": 0,
+      "derivation": "E = P_avg / f_rep = 1 W / 1000 Hz = 0.001 J"
+    },
+    {
+      "id": "temporal_peak_factor_gaussian",
+      "description": "Gaussian temporal peak factor",
+      "target": "temporalPeakFactor",
+      "inputs": {
+        "shape": "gaussian"
+      },
+      "expected": {
+        "value": 0.939437278699
+      },
+      "toleranceRel": 1e-12,
+      "derivation": "sqrt(4 * ln(2) / pi) = sqrt(4*0.6931471805599453/3.141592653589793) = 0.939437278699"
+    },
+    {
+      "id": "temporal_peak_factor_sech2",
+      "description": "Sech² temporal peak factor",
+      "target": "temporalPeakFactor",
+      "inputs": {
+        "shape": "sech2"
+      },
+      "expected": {
+        "value": 0.881373587019543
+      },
+      "toleranceRel": 1e-12,
+      "derivation": "arcosh(sqrt(2)) = ln(1 + sqrt(2)) = ln(2.414213562373095) = 0.881373587019543"
+    },
+    {
+      "id": "temporal_peak_factor_rectangular",
+      "description": "Rectangular temporal peak factor",
+      "target": "temporalPeakFactor",
+      "inputs": {
+        "shape": "rectangular"
+      },
+      "expected": {
+        "value": 1
+      },
+      "toleranceRel": 0,
+      "derivation": "Constant intensity => shape factor = 1"
+    },
+    {
+      "id": "peak_power_gaussian_100fs_1mJ",
+      "description": "Peak power for Gaussian pulse, 1 mJ, 100 fs",
+      "target": "peakPowerW",
+      "inputs": {
+        "energyJ": 0.001,
+        "durationFwhmS": 1e-13,
+        "shape": "gaussian"
+      },
+      "expected": {
+        "value": 9394372786.99
+      },
+      "toleranceRel": 1e-12,
+      "derivation": "P_peak = (E / tau) * shape = (0.001 / 1e-13) * 0.9394372787 = 9.394372787e9"
+    },
+    {
+      "id": "peak_power_sech2_100fs_1mJ",
+      "description": "Peak power for sech² pulse, 1 mJ, 100 fs",
+      "target": "peakPowerW",
+      "inputs": {
+        "energyJ": 0.001,
+        "durationFwhmS": 1e-13,
+        "shape": "sech2"
+      },
+      "expected": {
+        "value": 8813735870.19543
+      },
+      "toleranceRel": 1e-12,
+      "derivation": "P_peak = 1e10 * 0.881373587019543 = 8.813735870e9"
+    },
+    {
+      "id": "peak_power_rectangular_100fs_1mJ",
+      "description": "Peak power for rectangular pulse, 1 mJ, 100 fs",
+      "target": "peakPowerW",
+      "inputs": {
+        "energyJ": 0.001,
+        "durationFwhmS": 1e-13,
+        "shape": "rectangular"
+      },
+      "expected": {
+        "value": 10000000000.0
+      },
+      "toleranceRel": 0,
+      "derivation": "P_peak = 1e10 * 1 = 1e10"
+    },
+    {
+      "id": "fluence_round_0.5mm_1mJ",
+      "description": "Gaussian peak fluence for round beam w=0.5 mm, 1 mJ",
+      "target": "gaussianPeakFluenceJPerCm2",
+      "inputs": {
+        "energyJ": 0.001,
+        "radiusXmm": 0.5,
+        "radiusYmm": 0.5
+      },
+      "expected": {
+        "value": 0.254647908947
+      },
+      "toleranceRel": 1e-12,
+      "derivation": "F_peak = 2*E / (pi*w^2/100) = 0.002 / (pi*0.25/100) = 0.8/pi = 0.254647908947"
+    },
+    {
+      "id": "fluence_elliptical_0.03x0.12_1mJ",
+      "description": "Gaussian peak fluence for elliptical beam wx=0.03, wy=0.12 mm, 1 mJ",
+      "target": "gaussianPeakFluenceJPerCm2",
+      "inputs": {
+        "energyJ": 0.001,
+        "radiusXmm": 0.03,
+        "radiusYmm": 0.12
+      },
+      "expected": {
+        "value": 17.68388256576615
+      },
+      "toleranceRel": 1e-12,
+      "derivation": "F = 0.002 / (pi*0.03*0.12/100) = 0.002 / (pi*3.6e-5) = 2/(pi*0.036) = 17.6838821811",
+      "triage": "Manager 2026-07-04: Worker-Wert {'value': 17.6838821811} war ab der 8. Stelle falsch gerundet; exakt ist 2*0.001/(pi*0.003*0.012 cm^2) = 17.68388256576615 (unabhaengig nachgerechnet, Core stimmt exakt)."
+    },
+    {
+      "id": "intensity_chain_from_peak_power",
+      "description": "Gaussian peak intensity from known peak power and round beam w=0.5 mm",
+      "target": "gaussianPeakIntensityWPerCm2",
+      "inputs": {
+        "powerW": 9394372786.99,
+        "radiusXmm": 0.5,
+        "radiusYmm": 0.5
+      },
+      "expected": {
+        "value": 2392257386075.9097
+      },
+      "toleranceRel": 1e-12,
+      "derivation": "I_peak = 2*P / area_cm2 = 2*9.394372787e9 / (pi*0.25/100) = 1.8788745574e10 * 400/pi = 7.5154982296e12 / pi ≈ 2.392460077e12",
+      "triage": "Manager 2026-07-04: Worker-Wert {'value': 2392460077000.0} hatte relΔ 8.5e-5 (Handrechnungsfehler); exakt ist 2*(2*sqrt(ln2/pi)*0.001/1e-13)/(pi*0.05^2 cm^2) = 2.3922573861e12 (unabhaengig nachgerechnet, Core stimmt exakt)."
+    },
+    {
+      "id": "area_conversion_100mm2_to_cm2",
+      "description": "mm² to cm² conversion for 100 mm²",
+      "target": "mm2ToCm2",
+      "inputs": {
+        "valueMm2": 100
+      },
+      "expected": {
+        "value": 1
+      },
+      "toleranceRel": 0,
+      "derivation": "1 cm² = 100 mm², so 100 mm² = 1 cm²"
+    },
+    {
+      "id": "area_conversion_1mm2_to_cm2",
+      "description": "mm² to cm² conversion for 1 mm²",
+      "target": "mm2ToCm2",
+      "inputs": {
+        "valueMm2": 1
+      },
+      "expected": {
+        "value": 0.01
+      },
+      "toleranceRel": 0,
+      "derivation": "1 mm² = (1/100) cm² = 0.01 cm²"
+    }
+  ]
+}

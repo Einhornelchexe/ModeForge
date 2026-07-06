@@ -1,0 +1,199 @@
+{
+  "domain": "beams",
+  "cases": [
+    {
+      "id": "fwhm_to_one_over_e2",
+      "description": "Convert FWHM diameter 0.588705 mm to 1/e^2 radius.",
+      "target": "fwhmDiameterToOneOverE2RadiusMm",
+      "inputs": {
+        "fwhmDiameterMm": 0.5887050112577373
+      },
+      "expected": {
+        "radiusMm": 0.5
+      },
+      "toleranceRel": 1e-12,
+      "derivation": "w = fwhm / sqrt(2*ln2) = 0.5887050112577373 / 1.1774100225154747 = 0.5"
+    },
+    {
+      "id": "one_over_e2_to_fwhm",
+      "description": "Convert 1/e^2 radius 0.5 mm to FWHM diameter.",
+      "target": "oneOverE2RadiusToFwhmDiameterMm",
+      "inputs": {
+        "radiusMm": 0.5
+      },
+      "expected": {
+        "fwhmDiameterMm": 0.5887050112577373
+      },
+      "toleranceRel": 1e-12,
+      "derivation": "fwhm = w * sqrt(2*ln2) = 0.5 * 1.1774100225154747 = 0.5887050112577373"
+    },
+    {
+      "id": "rms_to_one_over_e2",
+      "description": "Convert rms radius 0.25 mm to 1/e^2 radius.",
+      "target": "beamWidthToOneOverE2RadiusMm",
+      "inputs": {
+        "value": 0.25,
+        "basis": "rms_radius"
+      },
+      "expected": {
+        "oneOverE2RadiusMm": 0.5
+      },
+      "toleranceRel": 1e-12,
+      "derivation": "1/e^2 radius = 2 * rms_radius; 2 * 0.25 = 0.5"
+    },
+    {
+      "id": "d4sigma_to_one_over_e2",
+      "description": "Convert D4σ diameter 1.0 mm to moment radius (1/e^2 equivalent).",
+      "target": "d4SigmaDiameterToMomentRadiusMm",
+      "inputs": {
+        "d4SigmaDiameterMm": 1.0
+      },
+      "expected": {
+        "momentRadiusMm": 0.5
+      },
+      "toleranceRel": 1e-12,
+      "derivation": "moment radius = d4sigma / 2 = 1.0 / 2 = 0.5"
+    },
+    {
+      "id": "hermite_m2_1_0",
+      "description": "M² for HG₁,₀ mode.",
+      "target": "hermiteGaussianM2",
+      "inputs": {
+        "kind": "HG",
+        "m": 1,
+        "n": 0,
+        "waistRadiusMm": 0.5
+      },
+      "expected": {
+        "m2x": 3,
+        "m2y": 1
+      },
+      "toleranceRel": 0,
+      "derivation": "M2x = 2*1+1 = 3; M2y = 2*0+1 = 1"
+    },
+    {
+      "id": "hermite_m2_3_2",
+      "description": "M² for HG₃,₂ mode.",
+      "target": "hermiteGaussianM2",
+      "inputs": {
+        "kind": "HG",
+        "m": 3,
+        "n": 2,
+        "waistRadiusMm": 0.5
+      },
+      "expected": {
+        "m2x": 7,
+        "m2y": 5
+      },
+      "toleranceRel": 0,
+      "derivation": "M2x = 2*3+1 = 7; M2y = 2*2+1 = 5"
+    },
+    {
+      "id": "laguerre_m2_1_2",
+      "description": "M² for LG₁,₂ mode.",
+      "target": "laguerreGaussianM2",
+      "inputs": {
+        "kind": "LG",
+        "p": 1,
+        "l": 2,
+        "waistRadiusMm": 0.5
+      },
+      "expected": {
+        "m2": 5
+      },
+      "toleranceRel": 0,
+      "derivation": "M2 = 2*1 + |2| + 1 = 5"
+    },
+    {
+      "id": "moment_m2_from_d4sigma",
+      "description": "Second-moment M² from D4σ waist diameter 0.2 mm, full-angle divergence 0.005 rad, λ = 0.5 µm.",
+      "target": "momentM2FromD4Sigma",
+      "inputs": {
+        "d4SigmaDiameterMm": 0.2,
+        "divergenceFullAngleRad": 0.005,
+        "wavelengthUm": 0.5
+      },
+      "expected": {
+        "m2": 1.5707963267948966
+      },
+      "toleranceRel": 1e-14,
+      "derivation": "M² = (π * 0.2 * 0.005) / (4 * (0.5 / 1000)) = π/2 ≈ 1.5707963267948966"
+    },
+    {
+      "id": "caustic_fit",
+      "description": "Fit a synthetic caustic generated from w₀=0.11 mm, z₀=40 mm, M²=1.2, λ=0.632 µm. 7 noiseless (z, w) points.",
+      "target": "fitGaussianBeamFromRadii",
+      "inputs": {
+        "measurements": [
+          {
+            "zMm": -10,
+            "radiusMm": 0.155373
+          },
+          {
+            "zMm": 10,
+            "radiusMm": 0.128199
+          },
+          {
+            "zMm": 30,
+            "radiusMm": 0.112167
+          },
+          {
+            "zMm": 40,
+            "radiusMm": 0.11
+          },
+          {
+            "zMm": 50,
+            "radiusMm": 0.112167
+          },
+          {
+            "zMm": 70,
+            "radiusMm": 0.128199
+          },
+          {
+            "zMm": 90,
+            "radiusMm": 0.155373
+          }
+        ],
+        "wavelengthUm": 0.632
+      },
+      "expected": {
+        "waistPositionMm": 40,
+        "waistRadiusMm": 0.11,
+        "divergenceHalfAngleRad": 0.002194602202,
+        "m2": 1.2,
+        "residualRmsMm": 0,
+        "maxRelativeResidual": 0
+      },
+      "toleranceRel": 1e-05,
+      "derivation": "Analytic caustic: θ = M²λ/(π w₀) = 1.2*0.632/(π*0.11) = 0.002194602202 rad; w²(z) = w₀² + θ² (z−z₀)². Least-squares recovers coefficients exactly."
+    },
+    {
+      "id": "one_over_e2_to_rms",
+      "description": "Reverse conversion: 1/e^2 radius w=0.5mm -> rms radius (sigma = w/2).",
+      "target": "oneOverE2RadiusToBasisValueMm",
+      "inputs": {
+        "radiusMm": 0.5,
+        "basis": "rms_radius"
+      },
+      "expected": {
+        "value": 0.25
+      },
+      "toleranceRel": 1e-12,
+      "derivation": "For TEM00 Gaussian intensity, sigma = w/2 exactly. Added by manager 2026-07-04 (debate round 2 fix failed to apply)."
+    },
+    {
+      "id": "one_over_e2_to_d4sigma",
+      "description": "Reverse conversion: 1/e^2 radius w=0.5mm -> D4sigma diameter (=2w).",
+      "target": "oneOverE2RadiusToBasisValueMm",
+      "inputs": {
+        "radiusMm": 0.5,
+        "basis": "d4sigma_diameter"
+      },
+      "expected": {
+        "value": 1.0
+      },
+      "toleranceRel": 1e-12,
+      "derivation": "D4sigma diameter = 4*sigma = 2w exactly. Added by manager 2026-07-04 (debate round 2 fix failed to apply)."
+    }
+  ]
+}

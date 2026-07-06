@@ -1,0 +1,32 @@
+{
+  "kind": "two-lens-optimizer",
+  "input": {
+    "version": "0.1",
+    "beam": {
+      "kind": "gaussian",
+      "wavelengthUm": 1.064,
+      "waistRadiusMm": 0.5,
+      "waistPositionMm": 0
+    },
+    "lenses": [
+      {
+        "id": "f100",
+        "focalLengthMm": 100,
+        "apertureRadiusMm": 10
+      },
+      {
+        "id": "f150",
+        "focalLengthMm": 150,
+        "apertureRadiusMm": 10
+      }
+    ],
+    "search": {
+      "lens1Zmm": [100],
+      "lens2Zmm": [300],
+      "targetZmm": 500,
+      "targetRadiusMm": 0.5,
+      "minSeparationMm": 50,
+      "maxResults": 2
+    }
+  }
+}
