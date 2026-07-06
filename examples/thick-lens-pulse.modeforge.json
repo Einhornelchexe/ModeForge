@@ -1,0 +1,37 @@
+{
+  "version": "0.1",
+  "beam": {
+    "kind": "gaussian",
+    "wavelengthUm": 1.064,
+    "waistRadiusMm": 0.5,
+    "waistPositionMm": 0,
+    "powerW": 1
+  },
+  "beamline": [
+    {
+      "id": "window",
+      "kind": "slab",
+      "thicknessMm": 2,
+      "refractiveIndex": 1.45,
+      "apertureRadiusMm": 5
+    },
+    {
+      "id": "thick-lens",
+      "kind": "thick-lens",
+      "radius1Mm": 50,
+      "radius2Mm": -50,
+      "thicknessMm": 5,
+      "refractiveIndex": 1.5,
+      "apertureRadiusMm": 12
+    }
+  ],
+  "pulses": {
+    "averagePowerW": 1,
+    "repetitionRateHz": 1000,
+    "durationFwhmS": 1e-13,
+    "shape": "gaussian"
+  },
+  "display": {
+    "widthBasis": "one_over_e2_radius"
+  }
+}

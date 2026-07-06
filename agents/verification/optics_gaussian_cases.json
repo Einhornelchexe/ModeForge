@@ -1,0 +1,177 @@
+{
+  "domain": "optics-gaussian",
+  "cases": [
+    {
+      "id": "rayleigh-m2-1",
+      "description": "Rayleigh range for a fundamental Gaussian (M2=1). w0=0.5mm, lambda=1.064um.",
+      "target": "rayleighRangeMm",
+      "inputs": {
+        "waistRadiusMm": 0.5,
+        "wavelengthUm": 1.064,
+        "m2": 1
+      },
+      "expected": 738.156168794,
+      "toleranceRel": 1e-09,
+      "derivation": "zR = pi * w0^2 / (M2 * lambda_mm). w0=0.5 mm -> w0^2=0.25. lambda_mm = 1.064/1000 = 0.001064. zR = 3.141592653589793 * 0.25 / 0.001064 = 0.7853981633974483 / 0.001064 = 738.156168794 mm."
+    },
+    {
+      "id": "rayleigh-m2-2",
+      "description": "Rayleigh range for M2=2 (reduced by factor 2).",
+      "target": "rayleighRangeMm",
+      "inputs": {
+        "waistRadiusMm": 0.5,
+        "wavelengthUm": 1.064,
+        "m2": 2
+      },
+      "expected": 369.078084397,
+      "toleranceRel": 1e-09,
+      "derivation": "zR = pi * 0.25 / (2 * 0.001064) = 0.7853981634 / 0.002128 = 369.078084397 mm."
+    },
+    {
+      "id": "divergence-half-angle",
+      "description": "Far-field half-angle divergence for a fundamental Gaussian.",
+      "target": "divergenceHalfAngleRad",
+      "inputs": {
+        "waistRadiusMm": 0.5,
+        "wavelengthUm": 1.064,
+        "m2": 1
+      },
+      "expected": 0.000677364,
+      "toleranceRel": 1e-06,
+      "derivation": "theta = M2 * lambda_mm / (pi * w0) = 1 * 0.001064 / (3.141592653589793 * 0.5) = 0.001064 / 1.5707963267948966 = 6.77364e-4 rad."
+    },
+    {
+      "id": "radius-at-zR",
+      "description": "Gaussian radius at one Rayleigh range from the waist.",
+      "target": "gaussianRadiusAtZ",
+      "inputs": {
+        "zFromWaistMm": 738.156168794,
+        "waistRadiusMm": 0.5,
+        "wavelengthUm": 1.064,
+        "m2": 1
+      },
+      "expected": 0.707106781,
+      "toleranceRel": 1e-09,
+      "derivation": "w(z=zR) = w0 * sqrt(1 + (zR/zR)^2) = 0.5 * sqrt(2) = 0.5 * 1.4142135623730951 = 0.7071067811865476 mm."
+    },
+    {
+      "id": "radius-at-3zR",
+      "description": "Gaussian radius at 3*zR from the waist.",
+      "target": "gaussianRadiusAtZ",
+      "inputs": {
+        "zFromWaistMm": 2214.468506382,
+        "waistRadiusMm": 0.5,
+        "wavelengthUm": 1.064,
+        "m2": 1
+      },
+      "expected": 1.58113883,
+      "toleranceRel": 1e-09,
+      "derivation": "w = 0.5 * sqrt(1 + 9) = 0.5 * sqrt(10) = 0.5 * 3.1622776601683795 = 1.5811388300841898 mm."
+    },
+    {
+      "id": "qAtZ-test",
+      "description": "Complex q parameter at z=100 mm from the waist — first half of the round‑trip.",
+      "target": "qAtZ",
+      "inputs": {
+        "zFromWaistMm": 100,
+        "waistRadiusMm": 0.5,
+        "wavelengthUm": 1.064,
+        "m2": 1
+      },
+      "expected": {
+        "re": 100,
+        "im": 738.156168794
+      },
+      "toleranceRel": 1e-09,
+      "derivation": "q(z) = z + i*zR. With z=100 mm and zR=738.156168794 mm (from case rayleigh-m2-1)."
+    },
+    {
+      "id": "radius-from-q-roundtrip",
+      "description": "Round‑trip: qAtZ then radiusFromQ recovers the Gaussian radius at that z.",
+      "target": "radiusFromQ",
+      "inputs": {
+        "q": {
+          "re": 100,
+          "im": 738.156168794
+        },
+        "wavelengthUm": 1.064,
+        "m2": 1
+      },
+      "expected": 0.5045671,
+      "toleranceRel": 1e-06,
+      "derivation": "Using 1/q = 1/R - i*lambda_eff/(pi*w^2) gives w = sqrt(lambda_eff / (pi * (-Im(1/q)))). Equivalently w(z) = w0*sqrt(1+(z/zR)^2) = 0.5 * sqrt(1 + (100/738.156)^2) = 0.5 * sqrt(1.01835) = 0.504567 mm."
+    },
+    {
+      "id": "transform-q-thinlens",
+      "description": "ABCD transform of q by a thin lens (f=200 mm) with input waist 500 mm before the lens.",
+      "target": "transformQ",
+      "inputs": {
+        "q": {
+          "re": 500,
+          "im": 738.156168794
+        },
+        "matrix": {
+          "a": 1,
+          "b": 0,
+          "c": -0.005,
+          "d": 1
+        }
+      },
+      "expected": {
+        "re": -218.90137254192481,
+        "im": 46.50721580165111
+      },
+      "toleranceRel": 1e-06,
+      "derivation": "Applying ABCD law: q' = (A q + B)/(C q + D) = q / (1 - q/f). f=200, q_in=500+i*738.156. 1 - q/f = -1.5 - i*3.69078. |denom|² = 15.8719. q' = (500+i*zR)*(-1.5+i*3.69078)/15.8719 = (-3474.3726 + i*738.1562)/15.8719 = -218.901 + i*46.5071.",
+      "triage": "Manager 2026-07-04: Worker-Werte {'re': -218.901, 'im': 46.5071} waren auf 6 Stellen gerundet (im sogar falsch gerundet) bei Toleranz 1e-6; exakte Rechnung q'=q/(Cq+1) unabhaengig nachvollzogen, Core exakt."
+    },
+    {
+      "id": "waist-after-lens",
+      "description": "Extract new waist position and size after the thin lens using waistFromQ.",
+      "target": "waistFromQ",
+      "inputs": {
+        "q": {
+          "re": -218.901,
+          "im": 46.5071
+        },
+        "wavelengthUm": 1.064,
+        "m2": 1
+      },
+      "expected": {
+        "waistOffsetMm": 218.901,
+        "rayleighRangeMm": 46.5071,
+        "waistRadiusMm": 0.12550340461132287
+      },
+      "toleranceRel": 1e-06,
+      "derivation": "waistOffsetMm = -Re(q) = 218.901 mm. rayleighRangeMm = Im(q) = 46.5071 mm. waistRadiusMm = sqrt( M2 * lambda_mm * zR' / pi ) = sqrt(0.001064 * 46.5071 / 3.14159265) = sqrt(0.015751) = 0.12551 mm.",
+      "triage": "Manager 2026-07-04: Worker-Wert 0.12551 hatte Letztstellen-Dreher; exakt ist sqrt(lambda*zR/pi) = 0.1255034 (unabhaengig nachgerechnet, Core exakt)."
+    },
+    {
+      "id": "free-space-slab-composite",
+      "description": "Composite matrix of free-space (100 mm) and a plane-parallel slab (t=50 mm, n=1.5) yields effective B = L + t/n.",
+      "target": "multiplyMatrices",
+      "inputs": {
+        "left": {
+          "a": 1,
+          "b": 100,
+          "c": 0,
+          "d": 1
+        },
+        "right": {
+          "a": 1,
+          "b": 33.333333333333336,
+          "c": 0,
+          "d": 1
+        }
+      },
+      "expected": {
+        "a": 1,
+        "b": 133.33333333333334,
+        "c": 0,
+        "d": 1
+      },
+      "toleranceRel": 1e-12,
+      "derivation": "A plane-parallel slab in air acts as free-space(t/n). Combined with free-space(L) the total B = L + t/n = 100 + 50/1.5 = 100 + 33.333... = 133.333... mm."
+    }
+  ]
+}

@@ -1,0 +1,82 @@
+[
+  {
+    "file": "basic-gaussian.modeforge.json",
+    "kind": "modeforge-project",
+    "zGridCount": 2,
+    "componentCount": 2,
+    "matrixCount": 2,
+    "waistCount": 1,
+    "finalRadiusXmm": 0.504567351568,
+    "warningCount": 0
+  },
+  {
+    "file": "doublet-stack.modeforge.json",
+    "kind": "modeforge-project",
+    "zGridCount": 4,
+    "componentCount": 3,
+    "matrixCount": 3,
+    "waistCount": 1,
+    "finalRadiusXmm": 0.0927068391697,
+    "warningCount": 0
+  },
+  {
+    "file": "thick-lens-pulse.modeforge.json",
+    "kind": "modeforge-project",
+    "zGridCount": 3,
+    "componentCount": 2,
+    "matrixCount": 2,
+    "waistCount": 1,
+    "finalRadiusXmm": 0.483343669885,
+    "warningCount": 0
+  },
+  {
+    "file": "field-beamline-probes.headless.json",
+    "kind": "field-beamline",
+    "planeCount": 4,
+    "probeCount": 4,
+    "radiusXmm": 0.106430686077,
+    "analyticalRadiusXmm": 0.106348290478,
+    "imageCount": 1089,
+    "warningCount": 2
+  },
+  {
+    "file": "field-beamline.headless.json",
+    "kind": "field-beamline",
+    "planeCount": 4,
+    "probeCount": 0,
+    "radiusXmm": 0.106430686077,
+    "analyticalRadiusXmm": 0.106348290478,
+    "imageCount": 1089,
+    "warningCount": 0
+  },
+  {
+    "file": "field-fresnel.headless.json",
+    "kind": "field-fresnel",
+    "outputPower": 0.0226142448659,
+    "radiusXmm": 0.120747066516,
+    "warningCount": 2
+  },
+  {
+    "file": "measured-fit.headless.json",
+    "kind": "measured-beam-fit",
+    "ok": true,
+    "waistRadiusMm": 0.399942562586,
+    "m2": 1.98915889973,
+    "warningCount": 0
+  },
+  {
+    "file": "two-lens-optimizer.headless.json",
+    "kind": "two-lens-optimizer",
+    "solutionCount": 2,
+    "topScore": 0.00913470313664,
+    "warningCount": 0
+  },
+  {
+    "file": "zmx-import.headless.json",
+    "kind": "zmx-import",
+    "ok": true,
+    "surfaceCount": 2,
+    "unresolvedCount": 0,
+    "warningCount": 0
+  }
+]

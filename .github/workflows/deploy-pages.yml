@@ -1,0 +1,47 @@
+name: build-and-deploy
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      # npm install instead of ci: the Windows-generated lockfile omits
+      # foreign-platform optional deps (@emnapi) that Linux resolution needs
+      - run: npm install --no-audit --no-fund
+      - run: npm test
+      - run: npm run verify:cases
+      - run: npm run verify:headless
+      - run: npm run check:scope
+      - run: npm run build:web
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: dist/web
+
+  deploy:
+    # set the repository variable DEPLOY_PAGES=true on the public repo to go live
+    if: ${{ vars.DEPLOY_PAGES == 'true' }}
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4

@@ -1,0 +1,25 @@
+{
+  "version": "0.1",
+  "beam": {
+    "kind": "gaussian",
+    "wavelengthUm": 1.064,
+    "waistRadiusMm": 0.5,
+    "waistPositionMm": 0
+  },
+  "beamline": [
+    {
+      "id": "free-space-100",
+      "kind": "free-space",
+      "lengthMm": 100
+    },
+    {
+      "id": "lens-150",
+      "kind": "thin-lens",
+      "focalLengthMm": 150,
+      "apertureRadiusMm": 10
+    }
+  ],
+  "display": {
+    "widthBasis": "one_over_e2_radius"
+  }
+}

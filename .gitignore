@@ -1,0 +1,9 @@
+.design_import_tmp/
+Frontend design V3 masterplan.zip
+node_modules/
+dist/
+coverage/
+.tmp_*
+*.log
+
+.mcp.json

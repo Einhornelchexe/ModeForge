@@ -1,0 +1,16 @@
+{
+  "kind": "field-fresnel",
+  "input": {
+    "gaussian": {
+      "nx": 9,
+      "ny": 9,
+      "dxMm": 0.05,
+      "dyMm": 0.05,
+      "wavelengthUm": 1.064,
+      "waistRadiusMm": 0.12
+    },
+    "distanceMm": 5,
+    "method": "angular-spectrum",
+    "samplingBeamRadiusMm": 0.12
+  }
+}

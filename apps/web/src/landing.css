@@ -1,0 +1,106 @@
+/* Landing page — transcribed from "ModeForge Index" design. */
+
+@keyframes mfBeamDrift {
+  0% {
+    stroke-dashoffset: 0;
+  }
+  100% {
+    stroke-dashoffset: -46;
+  }
+}
+
+.ld-page {
+  min-height: 100vh;
+  background: radial-gradient(120% 90% at 70% -15%, #121a28 0%, #0a0d12 55%, #080b10 100%);
+  color: #e7ecf4;
+  font-family: "Space Grotesk", sans-serif;
+}
+
+.ld-wrap {
+  max-width: 1120px;
+  margin: 0 auto;
+  padding: 0 28px;
+}
+
+.ld-nav-link {
+  text-decoration: none;
+  white-space: nowrap;
+  color: #97a1b2;
+  font: 500 13px "Space Grotesk", sans-serif;
+  padding: 8px 12px;
+  border: 1px solid #232b37;
+  border-radius: 8px;
+}
+
+.ld-nav-link:hover {
+  color: #e7ecf4;
+  border-color: #3a4657;
+}
+
+.ld-cta {
+  text-decoration: none;
+  white-space: nowrap;
+  color: #5ce1a0;
+  font: 600 13px "Space Grotesk", sans-serif;
+  padding: 8px 14px;
+  background: linear-gradient(180deg, #1e4530 0%, #143122 100%);
+  border: 1px solid #35a873;
+  border-radius: 8px;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.1), 0 8px 20px -10px rgba(92, 225, 160, 0.35);
+}
+
+.ld-cta.big {
+  font-size: 14.5px;
+  padding: 12px 20px;
+  border-radius: 9px;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.1), 0 10px 24px -10px rgba(92, 225, 160, 0.4);
+}
+
+.ld-cta-secondary {
+  text-decoration: none;
+  white-space: nowrap;
+  color: #c7cfdb;
+  font: 500 14.5px "Space Grotesk", sans-serif;
+  padding: 12px 20px;
+  background: linear-gradient(180deg, #232e3d 0%, #171f2a 100%);
+  border: 1px solid #2e3a4b;
+  border-radius: 9px;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.06);
+}
+
+.ld-lang-btn {
+  border: none;
+  border-radius: 6px;
+  padding: 5px 10px;
+  font: 500 11px "Space Grotesk", sans-serif;
+  cursor: pointer;
+  background: transparent;
+  color: #8b94a3;
+}
+
+.ld-lang-btn.active {
+  font-weight: 600;
+  background: linear-gradient(180deg, #283444 0%, #1c2531 100%);
+  color: #e7ecf4;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.07);
+}
+
+.ld-foot-link {
+  font: 400 12px "Space Grotesk", sans-serif;
+  color: #97a1b2;
+  text-decoration: none;
+}
+
+.ld-foot-link:hover {
+  color: #e7ecf4;
+}
+
+.ld-legal-link {
+  font: 500 12px "Space Grotesk", sans-serif;
+  color: #97a1b2;
+  text-decoration: none;
+}
+
+.ld-legal-link:hover {
+  color: #e7ecf4;
+}

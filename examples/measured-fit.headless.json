@@ -1,0 +1,26 @@
+{
+  "kind": "measured-beam-fit",
+  "wavelengthUm": 1.064,
+  "measurements": [
+    {
+      "zMm": -75,
+      "radiusMm": 0.43397712572244274
+    },
+    {
+      "zMm": -25,
+      "radiusMm": 0.40867717199263325
+    },
+    {
+      "zMm": 25,
+      "radiusMm": 0.4
+    },
+    {
+      "zMm": 75,
+      "radiusMm": 0.40867717199263325
+    },
+    {
+      "zMm": 125,
+      "radiusMm": 0.43397712572244274
+    }
+  ]
+}

@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://modeforge.rholabs.de/sitemap.xml
