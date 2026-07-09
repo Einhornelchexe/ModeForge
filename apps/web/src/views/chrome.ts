@@ -24,13 +24,13 @@ export function renderHeader(T: Strings): string {
     `<button data-act="tab" data-arg="${id}" class="wb-tab${S.tab === id ? " active" : ""}">${esc(label)}</button>`;
   return `
   <div class="wb-header">
-    <div style="display: flex; align-items: center; gap: 11px;">
+    <a href="./" title="Home / Übersicht" style="display: flex; align-items: center; gap: 11px; text-decoration: none; color: inherit;">
       <div class="wb-logo-box">${logoSvg()}</div>
       <div style="display: flex; align-items: baseline; gap: 8px;">
         <div class="wb-brand-name">ModeForge</div>
         <div class="wb-brand-tag">v1.0 · HEADLESS CORE</div>
       </div>
-    </div>
+    </a>
 
     <div class="wb-tabs">
       ${tab("beamline", T.tabBeamline)}

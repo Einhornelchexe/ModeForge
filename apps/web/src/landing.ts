@@ -158,7 +158,7 @@ function render(): void {
   <div class="ld-page">
 
     <div class="ld-wrap" style="padding-top: 22px; padding-bottom: 22px; display: flex; align-items: center; gap: 14px;">
-      <div style="display: flex; align-items: center; gap: 11px;">
+      <a href="./" title="Home / Übersicht" style="display: flex; align-items: center; gap: 11px; text-decoration: none; color: inherit;">
         <div style="width: 36px; height: 36px; border-radius: 10px; background: linear-gradient(180deg, #17222E 0%, #0F151E 100%); border: 1px solid #26313F; box-shadow: inset 0 1px 0 rgba(255,255,255,0.07); display: flex; align-items: center; justify-content: center;">
           ${logo(25, 18)}
         </div>
@@ -166,7 +166,7 @@ function render(): void {
           <span style="font-weight: 700; font-size: 17px;">ModeForge</span>
           <span style="font: 500 10px 'IBM Plex Mono'; color: #8B94A3; border: 1px solid #232B37; border-radius: 4px; padding: 2px 6px; letter-spacing: 0.06em;">v1.0</span>
         </div>
-      </div>
+      </a>
       <div style="flex: 1;"></div>
       <div style="display: flex; background: rgba(6,9,13,0.55); border: 1px solid #1B2330; border-radius: 8px; padding: 2px; gap: 2px; box-shadow: inset 0 1.5px 4px rgba(0,0,0,0.4);">
         <button data-lang="en" class="ld-lang-btn${lang === "en" ? " active" : ""}">EN</button>
