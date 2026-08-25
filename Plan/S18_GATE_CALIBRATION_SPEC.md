@@ -1738,3 +1738,12 @@ Added by v2.0:
 | 6 | The four-cell release curve is a per-seed-base measurement with a two-count spread; it is documented as a band (13.1). |
 | 7 | The repro corpus's scene generator has a first-draw seed band that biases any reference rectangle containing pixel (0, 0). The affected anchor is pinned with its provenance and the generator is deliberately untouched (13.4.1). |
 | 8 | The 51x51 fit fragility of 13.7 note 6 has no pinned witness in this release. |
+
+### 13.9 Cross-platform bit determinism (release 2.0.0 follow-up) [session record]
+
+Measured on the identical engine state and bit-identical inputs (input-buffer digests equal), Windows 11 x64 vs Linux x64, same JS runtime version (v24.14.0):
+
+- `Math.pow(x, n)` returns different last bits between the two OSes (200k-sample digest differs), while `exp`, `log`, `sin`, `cos`, `sqrt`, `atan2`, `hypot` and the composition `exp(n*log(x))` are bit-identical on the same sample. The runtime resolves `pow` through the platform math library.
+- Consequence in the analyzer: of all result sections only `fits` (iterative 2D fit; `pow` in the super-Gaussian model and its Jacobian) and the fit-derived `metrics` entries move, at relative 1e-12..1e-11 (witness: clean 96x96 case, `backgroundCounts` 1.602851930456622e-8 vs 1.6028519305781742e-8; `relativeRmsReduction` differs from the 12th digit). `raw`, `background`, `noise`, `roi`, `stability`, `momentsRoiDiagnostic`, `moments`, `aperture`, `tierCheck`, `residuals`, `profiles`, `warnings` are bit-identical across the OSes. No released rounded number moves; release decisions are unaffected.
+- Consequence for oracles: the five S21 absence-regression digests are platform-scoped and pinned per platform (win32 and linux columns, both measured); the headless/case suites compare platform-robust values and pass on both OSes unchanged.
+- Backlog (v2.1): a `pow`-free fit formulation (`exp(n*log(E))`, measured bit-stable across OSes) would make the whole result object cross-platform bit-identical; deferred because it re-times every pinned digest for a last-bit gain.
