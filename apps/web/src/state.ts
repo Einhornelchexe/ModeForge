@@ -174,6 +174,9 @@ export function applySuggestedImageRoi(
 // selection only — the engine always releases all six.
 export type ImageProfileKey = "cutX" | "cutY" | "projectionX" | "projectionY" | "axisMajor" | "axisMinor";
 export type ImageColorMap = "gray" | "turbo" | "viridis";
+// Residual controls are display-only. They never alter an analysis request or
+// a saved project.
+export type ImageResidualMode = "counts" | "percent-peak" | "sigma";
 export type DarkFrameDraft = {
   name: string;
   width: number;
@@ -229,6 +232,10 @@ export type ImageTabState = {
   colorMap: ImageColorMap;
   // Profile plot selection (display only).
   profileKey: ImageProfileKey;
+  // The manual shared S scale is stored in counts so a mode switch merely
+  // relabels it, just as it relabels the residual maps.
+  residualMode: ImageResidualMode;
+  residualManualScaleCounts: number | null;
   // Non-shrink note of the "ROI from fit" button: the rectangle key
   // `${x0}:${y0}:${width}:${height}` the note was raised for. The note is
   // rendered only while the draft rectangle still has that key, so ANY later
@@ -437,6 +444,8 @@ export function initialState(): AppState {
       previewViewBeforeBgDraw: null,
       colorMap: "gray",
       profileKey: "cutX",
+      residualMode: "counts",
+      residualManualScaleCounts: null,
       roiFitNote: null,
       roiClampNote: null,
       result: null,

@@ -35,15 +35,24 @@ import assert from "node:assert/strict";
 import { analyzeImage, type ImageAnalysisResult } from "../../packages/api/src/index.ts";
 import {
   buildProfilePlotData,
+  buildProfileResidualPlotData,
   IMAGE_PROFILE_KEYS,
   imageCloseupKind,
   imageRoiStateKey,
+  modelComparisonBlock,
   profileLabel,
+  qualityBox,
+  normalizeResidualValue,
+  residualModeAvailability,
+  residualModeScaleFactor,
+  residualScaleFromGrids,
+  resolvedResidualMode,
   renderImageTab,
   roiFromFitEligible,
   resolveProfileKey,
   resolveTypedRoi,
   suggestionDelta,
+  superGaussInterpretation,
   umToDisplay,
 } from "../../apps/web/src/views/image.ts";
 import { strings } from "../../apps/web/src/i18n.ts";
@@ -1222,4 +1231,121 @@ test("VF-38: ROI source uses distinct input, full-frame, and automatic labels", 
       assert.equal(kvValueForLabel(html, T.imgRoiSource), expected, `${lang} ${source}: distinct ROI source label`);
     }
   }
+});
+
+test("VF-39: shared residual scale ignores null and non-finite empty blocks", () => {
+  const scale = residualScaleFromGrids([
+    { values: [null, Number.NaN, Number.POSITIVE_INFINITY, -2.5, 7] },
+    { values: [undefined, -9, null] },
+  ]);
+  assert.equal(scale, 9, "only finite numeric block means may contribute to S");
+  assert.equal(residualScaleFromGrids([{ values: [null, Number.NaN] }]), 0, "no finite blocks means S is zero, not a null-derived sample");
+});
+
+test("VF-40: residual modes are pure linear relabeling with the documented guards", () => {
+  const usable = { amplitudeCounts: 20, sigmaCounts: 5, scaleSource: "mad", floorApplied: false } as const;
+  assert.equal(residualModeScaleFactor("counts", usable), 1);
+  assert.equal(residualModeScaleFactor("percent-peak", usable), 5);
+  assert.equal(residualModeScaleFactor("sigma", usable), 0.2);
+  assert.equal(normalizeResidualValue(-4, residualModeScaleFactor("percent-peak", usable)), -20);
+  assert.equal(normalizeResidualValue(-4, residualModeScaleFactor("sigma", usable)), -0.8);
+
+  const noAmplitude = { ...usable, amplitudeCounts: 0 };
+  assert.equal(residualModeAvailability(noAmplitude).percentPeakDisabled, true);
+  assert.equal(residualModeScaleFactor("percent-peak", noAmplitude), null);
+  assert.equal(resolvedResidualMode("percent-peak", noAmplitude), "counts");
+
+  for (const input of [
+    { ...usable, sigmaCounts: 0 },
+    { ...usable, scaleSource: "zero" },
+    { ...usable, floorApplied: true },
+  ]) {
+    assert.equal(residualModeAvailability(input).sigmaDisabled, true);
+    assert.equal(residualModeScaleFactor("sigma", input), null);
+    assert.equal(resolvedResidualMode("sigma", input), "counts");
+  }
+});
+
+test("VF-41: profile residual data stays on the selected profile and subtracts each available model", () => {
+  const result = cleanResult();
+  const plot = buildProfilePlotData(result, "cutX");
+  const residual = buildProfileResidualPlotData(result, "cutX");
+  assert.ok(plot !== null, "precondition: the clean result supplies a profile plot");
+  assert.ok(residual !== null, "precondition: the clean result supplies profile residuals");
+  assert.equal(residual.key, plot.key);
+  assert.deepEqual(residual.positions, plot.positions);
+  assert.ok(plot.gauss !== null, "precondition: the clean result supplies the Gaussian curve");
+  assert.ok(residual.gauss !== null, "precondition: the Gaussian residual curve is present");
+  assert.equal(residual.gauss[0], plot.measured[0] - plot.gauss[0]);
+  assert.ok(plot.superGauss !== null, "precondition: the clean result supplies the super-Gaussian curve");
+  assert.ok(residual.superGauss !== null, "precondition: the super-Gaussian residual curve is present");
+  assert.equal(residual.superGauss[0], plot.measured[0] - plot.superGauss[0]);
+});
+
+test("VF-42: model comparison and quality box expose existing values without a fit-domain fallback", () => {
+  const T = strings("en");
+  const result = cleanResult();
+  const html = withImageState({ loaded: true, result, width: 32, height: 32 }, () => renderImageTab(T));
+  assert.ok(html.includes(T.imgModelComparison), "the comparison panel is present");
+  assert.ok(html.includes(T.imgSuperGaussN), "the fitted exponent is prominent");
+  assert.ok(html.includes(T.imgFullResRoi), "comparison metrics name their full-resolution domain");
+  assert.ok(html.includes(T.imgQualityBox), "the compact quality panel is present");
+  for (const label of [
+    T.imgSaturated,
+    T.imgClippingSuspect,
+    T.imgHotPixels,
+    T.imgEdgeTouch,
+    T.imgGateMultiPeak,
+    T.imgUndeterminable,
+    T.imgFullFrame,
+    T.imgGeometryReleasable,
+    T.imgMomentSuppression,
+    T.imgResidualSigma,
+    T.imgResidualMaxDisplayBlocks,
+  ]) {
+    assert.ok(html.includes(label), `quality box must retain ${label}`);
+  }
+  const quality = qualityBox(T, result);
+  assert.ok(quality.includes(T.imgPeakToBackground), "quality box keeps the existing peak/sigma measurement");
+  assert.ok(
+    quality.includes(`${T.imgPass} · ${result.aperture.gates.multiPeak.significantPeakCount}`),
+    "single-peak quality output keeps the gate's pass/fail polarity and peak count",
+  );
+  assert.equal(superGaussInterpretation(1, false), "gaussian");
+  assert.equal(superGaussInterpretation(1.3, false), "no-interpretation");
+  assert.equal(superGaussInterpretation(2, false), "flat-top");
+  assert.equal(superGaussInterpretation(2, true), "boundary");
+});
+
+test("VF-43: a non-converged super-Gaussian fit shows only its status, never an n interpretation", () => {
+  const T = strings("en");
+  const result = cleanResult();
+  const superFit = result.fits.superGauss2d;
+  assert.ok(superFit?.params !== null && superFit?.params !== undefined, "precondition: the clean result supplies super-Gaussian parameters");
+  const variant = {
+    ...result,
+    fits: {
+      ...result.fits,
+      superGauss2d: { ...superFit, status: "max_iterations", converged: false },
+    },
+  } as ImageAnalysisResult;
+  const html = modelComparisonBlock(T, variant);
+  assert.ok(html.includes("—"), "the unavailable exponent is rendered as an em dash");
+  assert.ok(html.includes(T.imgStatusMaxIterations), "the fit status remains visible");
+  assert.ok(!html.includes(T.imgGaussianDescription), "a provisional n never receives a Gaussian interpretation");
+  assert.ok(!html.includes(T.imgFlatTopDescription), "a provisional n never receives a flat-top interpretation");
+});
+
+test("VF-44: a profile residual lane is omitted when every residual sample is non-finite", () => {
+  const result = cleanResult();
+  const profile = result.profiles.cutX;
+  assert.ok(profile !== null, "precondition: the clean result supplies the cut-X profile");
+  const variant = {
+    ...result,
+    profiles: {
+      ...result.profiles,
+      cutX: { ...profile, values: profile.values.map(() => Number.NaN) },
+    },
+  } as ImageAnalysisResult;
+  assert.equal(buildProfileResidualPlotData(variant, "cutX"), null);
 });

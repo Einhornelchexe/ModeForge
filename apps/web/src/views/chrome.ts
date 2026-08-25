@@ -30,7 +30,7 @@ export function renderHeader(T: Strings): string {
       <div class="wb-logo-box">${logoSvg()}</div>
       <div style="display: flex; align-items: baseline; gap: 8px;">
         <div class="wb-brand-name">ModeForge</div>
-        <div class="wb-brand-tag">v2.0 · HEADLESS CORE</div>
+        <div class="wb-brand-tag">v2.1 · HEADLESS CORE</div>
       </div>
     </a>
 

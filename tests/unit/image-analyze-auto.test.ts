@@ -461,16 +461,16 @@ test("S21: existing input shapes serialize byte-identically to the pre-stage bas
     {
       label: "clean-full-frame-float32",
       digests: {
-        win32: "d8413a43963675598208956b4edeb1c3",
-        linux: "f2e14a6dfb1878313e1e2501d264a461",
+        win32: "778b736ee777ecb60caf80e88dc575b3",
+        linux: "8aa5aaf33725c920d199f64caee06ff1",
       },
       input: { pixels: cleanPixels, width: 96, height: 96, dtype: "float32" },
     },
     {
       label: "noisy-manual-offset-with-roi",
       digests: {
-        win32: "83c022c2680d3b042906b15053acf4ae",
-        linux: "ff79a29887e1fd28c1f03ecbacf4c27f",
+        win32: "544d6e0fc4e2d17fd6aaf24b41ce6c93",
+        linux: "96da41b6083145ad088c625fdf42fb17",
       },
       input: {
         pixels: noisyPixels,
@@ -484,8 +484,8 @@ test("S21: existing input shapes serialize byte-identically to the pre-stage bas
     {
       label: "ramp-rect-median-corners",
       digests: {
-        win32: "25fabaa426d1e915b71b4a12494599c0",
-        linux: "32f452956ac70f8280e485be774ed029",
+        win32: "e1e15c08c536f3129a5b978458b32ddb",
+        linux: "006fe268c21a280abcc2f7a11f25fdd2",
       },
       input: {
         pixels: ramp,
@@ -499,8 +499,8 @@ test("S21: existing input shapes serialize byte-identically to the pre-stage bas
     {
       label: "ramp-robust-plane-corners",
       digests: {
-        win32: "ee833730210c5432adf2e01b94836847",
-        linux: "4b3c2f5e308bdec368891ff87e867375",
+        win32: "46038b4bf7a71786a199db26f0a19cc3",
+        linux: "7d38808c29aca3ea66b9afe9a85dec59",
       },
       input: {
         pixels: ramp,
@@ -513,8 +513,8 @@ test("S21: existing input shapes serialize byte-identically to the pre-stage bas
     {
       label: "calibrated-clean-alpha",
       digests: {
-        win32: "cf28481abeb87898e90e946f69a677fe",
-        linux: "8dca5f784df5c7bc70742daf4e46f183",
+        win32: "5ddf4d3044c19ba51d19d12818654de7",
+        linux: "519582ebf98d5b2184117eec4a362ff0",
       },
       input: {
         pixels: cleanPixels,

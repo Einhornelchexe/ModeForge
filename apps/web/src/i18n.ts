@@ -293,6 +293,42 @@ export type Strings = {
   imgFitStatus: string;
   imgResidualRms: string;
   imgResidualMax: string;
+  imgResidualSigma: string;
+  imgResidualNrmse: string;
+  imgResidualRmsSigma: string;
+  imgResidualMode: string;
+  imgResidualModeCounts: string;
+  imgResidualModePercentPeak: string;
+  imgResidualModeSigma: string;
+  imgResidualModePercentPeakUnavailable: string;
+  imgResidualModeSigmaNoSigma: string;
+  imgResidualModeSigmaZero: string;
+  imgResidualModeSigmaFloor: string;
+  imgResidualBlockHint: string;
+  imgResidualScale: string;
+  imgResidualMaxAbs: string;
+  imgResidualMaxDisplayBlocks: string;
+  imgResidualManualScale: string;
+  imgResidualAutoScale: string;
+  imgResidualGaussMap: string;
+  imgResidualSuperMap: string;
+  imgResidualSuperUnavailable: string;
+  imgResidualHistogram: string;
+  imgHistogramUnderflow: string;
+  imgHistogramOverflow: string;
+  imgSkewness: string;
+  imgExcessKurtosis: string;
+  imgFiniteCount: string;
+  imgFullResRoi: string;
+  imgModelComparison: string;
+  imgGaussianDescription: string;
+  imgFlatTopDescription: string;
+  imgExponentBoundaryDescription: string;
+  imgExponentNoInterpretation: string;
+  imgQualityBox: string;
+  imgQualityStability: string;
+  imgGeometryReleasable: string;
+  imgMomentSuppression: string;
   imgWidthFwhm: string;
   imgWidth1e2: string;
   imgYes: string;
@@ -455,6 +491,8 @@ export type Strings = {
   imgProfileExportPng: string;
   imgProfileMissing: string;
   imgProfileNoModel: string;
+  imgProfileResidualLane: string;
+  imgProfileResidualIntensity: string;
   imgProfileProjectionNote: string;
   imgProfileAxisNote: string;
   // Image analyzer tab — honest suggestion-iteration callout.
@@ -854,6 +892,43 @@ const en: Strings = {
   imgFitStatus: "FIT STATUS",
   imgResidualRms: "residual rms",
   imgResidualMax: "residual max abs",
+  imgResidualSigma: "residual sigma",
+  imgResidualNrmse: "NRMSE",
+  imgResidualRmsSigma: "RMS / sigma_B",
+  imgResidualMode: "Residual normalization",
+  imgResidualModeCounts: "Counts",
+  imgResidualModePercentPeak: "% peak",
+  imgResidualModeSigma: "sigma_B",
+  imgResidualModePercentPeakUnavailable: "% peak requires a finite, positive Gaussian fitted amplitude.",
+  imgResidualModeSigmaNoSigma: "sigma_B normalization requires sigma_B > 0.",
+  imgResidualModeSigmaZero: "sigma_B normalization is unavailable when the noise scale source is zero.",
+  imgResidualModeSigmaFloor: "sigma_B normalization is unavailable when a noise floor was applied.",
+  imgResidualBlockHint:
+    "Map cells are block means. For b > 1, |R/sigma_B| approximately 1 is only a noise-level approximation; edge blocks and correlated residuals can differ.",
+  imgResidualScale: "shared residual scale S",
+  imgResidualMaxAbs: "max |R|",
+  imgResidualMaxDisplayBlocks: "max |R| (display blocks)",
+  imgResidualManualScale: "manual S",
+  imgResidualAutoScale: "automatic",
+  imgResidualGaussMap: "Gaussian residual",
+  imgResidualSuperMap: "super-Gaussian residual",
+  imgResidualSuperUnavailable: "Super-Gaussian residual views require a converged fit.",
+  imgResidualHistogram: "RESIDUAL HISTOGRAM",
+  imgHistogramUnderflow: "underflow",
+  imgHistogramOverflow: "overflow",
+  imgSkewness: "skewness",
+  imgExcessKurtosis: "excess kurtosis",
+  imgFiniteCount: "finite count",
+  imgFullResRoi: "full-resolution finite ROI",
+  imgModelComparison: "MODEL COMPARISON",
+  imgGaussianDescription: "n near 1: the Gaussian describes the beam.",
+  imgFlatTopDescription: "n clearly above 1: flat-top character.",
+  imgExponentBoundaryDescription: "n is at its fit boundary; no interpretation is shown.",
+  imgExponentNoInterpretation: "n lies between the interpretation ranges; no interpretation is shown.",
+  imgQualityBox: "QUALITY / CONFIDENCE",
+  imgQualityStability: "ROI stability",
+  imgGeometryReleasable: "fit geometry releasable",
+  imgMomentSuppression: "moment release",
   imgWidthFwhm: "FWHM width",
   imgWidth1e2: "1/e² width",
   imgYes: "yes",
@@ -1019,6 +1094,8 @@ const en: Strings = {
   imgProfileExportPng: "Plot PNG",
   imgProfileMissing: "This profile was not released for the current run.",
   imgProfileNoModel: "No fit model drawn: the fit produced no parameters for this line.",
+  imgProfileResidualLane: "RESIDUAL LANE",
+  imgProfileResidualIntensity: "residual — counts",
   imgProfileProjectionNote:
     "A projection is a sum over the ROI, so the model line is the analytic marginal of the fitted 2D Gauss (sigma from the covariance) plus the summed background.",
   imgProfileAxisNote: "Position is the signed distance from the profile centre along the profile direction.",
@@ -1342,6 +1419,43 @@ const de: Strings = {
   imgFitStatus: "FIT-STATUS",
   imgResidualRms: "Residuum RMS",
   imgResidualMax: "Residuum max. abs.",
+  imgResidualSigma: "Residuen-Sigma",
+  imgResidualNrmse: "NRMSE",
+  imgResidualRmsSigma: "RMS / sigma_B",
+  imgResidualMode: "Residuen-Normierung",
+  imgResidualModeCounts: "Zählwerte",
+  imgResidualModePercentPeak: "% Peak",
+  imgResidualModeSigma: "sigma_B",
+  imgResidualModePercentPeakUnavailable: "% Peak erfordert eine endliche, positive angepasste Gauß-Amplitude.",
+  imgResidualModeSigmaNoSigma: "Die sigma_B-Normierung erfordert sigma_B > 0.",
+  imgResidualModeSigmaZero: "Die sigma_B-Normierung ist bei Skalenquelle Null nicht verfügbar.",
+  imgResidualModeSigmaFloor: "Die sigma_B-Normierung ist bei angewandtem Rauschboden nicht verfügbar.",
+  imgResidualBlockHint:
+    "Kartenfelder sind Blockmittelwerte. Für b > 1 ist |R/sigma_B| ungefähr 1 nur eine Rauschniveau-Näherung; Randblöcke und korrelierte Residuen können abweichen.",
+  imgResidualScale: "gemeinsame Residuenskala S",
+  imgResidualMaxAbs: "max |R|",
+  imgResidualMaxDisplayBlocks: "max |R| (Anzeigeblöcke)",
+  imgResidualManualScale: "manuelles S",
+  imgResidualAutoScale: "automatisch",
+  imgResidualGaussMap: "Gauß-Residuum",
+  imgResidualSuperMap: "Super-Gauß-Residuum",
+  imgResidualSuperUnavailable: "Super-Gauß-Residuenansichten erfordern einen konvergierten Fit.",
+  imgResidualHistogram: "RESIDUEN-HISTOGRAMM",
+  imgHistogramUnderflow: "Unterlauf",
+  imgHistogramOverflow: "Überlauf",
+  imgSkewness: "Schiefe",
+  imgExcessKurtosis: "Exzess-Kurtosis",
+  imgFiniteCount: "Anzahl endlicher Werte",
+  imgFullResRoi: "volle Auflösung, endliche ROI-Pixel",
+  imgModelComparison: "MODELLVERGLEICH",
+  imgGaussianDescription: "n nahe 1: Der Gauß beschreibt den Strahl.",
+  imgFlatTopDescription: "n deutlich über 1: Flat-Top-Charakter.",
+  imgExponentBoundaryDescription: "n liegt an seiner Fit-Grenze; keine Deutung wird gezeigt.",
+  imgExponentNoInterpretation: "n liegt zwischen den Deutungsbereichen; keine Deutung wird gezeigt.",
+  imgQualityBox: "QUALITÄT / VERTRAUEN",
+  imgQualityStability: "ROI-Stabilität",
+  imgGeometryReleasable: "Fit-Geometrie freigabefähig",
+  imgMomentSuppression: "Momentenfreigabe",
   imgWidthFwhm: "FWHM-Breite",
   imgWidth1e2: "1/e²-Breite",
   imgYes: "ja",
@@ -1505,6 +1619,8 @@ const de: Strings = {
   imgProfilePositionUm: "Position — µm",
   imgProfileIntensity: "Intensität — Counts",
   imgProfileExportPng: "Plot-PNG",
+  imgProfileResidualLane: "RESIDUENSPUR",
+  imgProfileResidualIntensity: "Residuum — Zählwerte",
   imgProfileMissing: "Dieses Profil wurde für den aktuellen Lauf nicht freigegeben.",
   imgProfileNoModel: "Keine Modellkurve gezeichnet: Der Fit hat für diese Linie keine Parameter geliefert.",
   imgProfileProjectionNote:

@@ -2,7 +2,14 @@ import assert from "node:assert/strict";
 import test from "node:test";
 
 import { assessAperture } from "../../packages/image/src/aperture.ts";
-import { fitGauss2d, fitSuperGauss2d, type Gauss2dFitParams } from "../../packages/image/src/fit.ts";
+import {
+  SUPER_GAUSS_N_MAX,
+  fitGauss2d,
+  fitSuperGauss2d,
+  type FitResult,
+  type Gauss2dFitParams,
+  type SuperGauss2dFitParams,
+} from "../../packages/image/src/fit.ts";
 import { computeRectMoments, type ImageMoments } from "../../packages/image/src/moments.ts";
 import {
   compareFitToMoments,
@@ -11,6 +18,7 @@ import {
   mapGauss2dToPhysical,
   mapMomentsToPhysical,
   sigmaFromSuperGaussWidth,
+  superGauss2dValueAt,
 } from "../../packages/image/src/reporting.ts";
 
 // Deterministic inline LCG for noise fixtures; identical sequence on every run.
@@ -113,6 +121,95 @@ function quadratureGamma(z: number): number {
 //   sigma = w * sqrt(2^(-1/n) * Gamma(2/n) / (2 * Gamma(1/n))).
 function referenceSigmaRatio(n: number): number {
   return Math.sqrt(Math.pow(2, -1 / n) * (quadratureGamma(2 / n) / (2 * quadratureGamma(1 / n))));
+}
+
+function fixedFit<P>(params: P, status: FitResult<P>["status"] = "converged"): FitResult<P> {
+  return {
+    status,
+    converged: status === "converged",
+    params,
+    iterations: 0,
+    costInitial: 0,
+    costFinal: 0,
+    residualRmsCounts: null,
+    residualMaxAbsCounts: null,
+    decimated: false,
+    decimationFactor: 1,
+    startSource: "moments",
+  };
+}
+
+function zeroGauss(amplitudeCounts = 0): Gauss2dFitParams {
+  return {
+    amplitudeCounts,
+    backgroundCounts: 0,
+    centerXPx: 0,
+    centerYPx: 0,
+    sigmaMajorPx: 1,
+    sigmaMinorPx: 1,
+    thetaRad: 0,
+  };
+}
+
+function zeroSuperGauss(superGaussN: number, amplitudeCounts = 0): SuperGauss2dFitParams {
+  return {
+    amplitudeCounts,
+    backgroundCounts: 0,
+    centerXPx: 0,
+    centerYPx: 0,
+    w1Px: 1,
+    w2Px: 1,
+    thetaRad: 0,
+    superGaussN,
+  };
+}
+
+function naiveResidualStats(values: number[]): {
+  meanCounts: number;
+  rmsCounts: number;
+  sigmaCounts: number;
+  skewness: number | null;
+  excessKurtosis: number | null;
+  finiteCount: number;
+} | null {
+  const finite = values.filter(Number.isFinite);
+  if (finite.length === 0) return null;
+  const meanCounts = finite.reduce((sum, value) => sum + value, 0) / finite.length;
+  const rmsCounts = Math.sqrt(finite.reduce((sum, value) => sum + value * value, 0) / finite.length);
+  const m2 = finite.reduce((sum, value) => sum + (value - meanCounts) ** 2, 0) / finite.length;
+  const m3 = finite.reduce((sum, value) => sum + (value - meanCounts) ** 3, 0) / finite.length;
+  const m4 = finite.reduce((sum, value) => sum + (value - meanCounts) ** 4, 0) / finite.length;
+  const sigmaCounts = Math.sqrt(m2);
+  return {
+    meanCounts,
+    rmsCounts,
+    sigmaCounts,
+    skewness: sigmaCounts > 0 ? m3 / sigmaCounts ** 3 : null,
+    excessKurtosis: sigmaCounts > 0 ? m4 / m2 ** 2 - 3 : null,
+    finiteCount: finite.length,
+  };
+}
+
+function directBlockMeans(values: number[], width: number, height: number, blockSizePx: number): Float64Array {
+  const displayWidth = Math.ceil(width / blockSizePx);
+  const displayHeight = Math.ceil(height / blockSizePx);
+  const output = new Float64Array(displayWidth * displayHeight);
+  for (let blockY = 0; blockY < displayHeight; blockY += 1) {
+    for (let blockX = 0; blockX < displayWidth; blockX += 1) {
+      let sum = 0;
+      let count = 0;
+      for (let y = blockY * blockSizePx; y < Math.min((blockY + 1) * blockSizePx, height); y += 1) {
+        for (let x = blockX * blockSizePx; x < Math.min((blockX + 1) * blockSizePx, width); x += 1) {
+          const value = values[y * width + x];
+          if (!Number.isFinite(value)) continue;
+          sum += value;
+          count += 1;
+        }
+      }
+      output[blockY * displayWidth + blockX] = count > 0 ? sum / count : Number.NaN;
+    }
+  }
+  return output;
 }
 
 function validMomentsFixture(): ImageMoments {
@@ -702,4 +799,331 @@ test("S18a reporting outputs are deterministic and never mutate the input pixel 
   const calibration = { pixelPitchUmX: 2, pixelPitchUmY: 1 };
   assert.deepStrictEqual(mapGauss2dToPhysical(params, calibration), mapGauss2dToPhysical(params, calibration));
   assert.deepStrictEqual(pixels, original);
+});
+
+test("S22 residual statistics use full-resolution finite residuals and population moments", () => {
+  const residualValues = [-2, -1, 0, 1, 2];
+  const comparison = compareModelResiduals(
+    { values: residualValues, width: residualValues.length, height: 1 },
+    { x0: 0, y0: 0, width: residualValues.length, height: 1 },
+    fixedFit(zeroGauss()),
+    null,
+    { noise: { sigmaCounts: 1, scaleSource: "mad", floorApplied: false } },
+  );
+  const diagnostics = comparison.residualDiagnostics;
+  assert.notEqual(diagnostics, null);
+  if (diagnostics === null) throw new Error("unreachable");
+  const expected = naiveResidualStats(residualValues);
+  assert.notEqual(expected, null);
+  if (expected === null) throw new Error("unreachable");
+  const actual = diagnostics.gauss.stats;
+  assert.notEqual(actual, null);
+  if (actual === null) throw new Error("unreachable");
+
+  for (const key of ["meanCounts", "rmsCounts", "sigmaCounts", "skewness", "excessKurtosis"] as const) {
+    assert.ok(Math.abs((actual[key] as number) - (expected[key] as number)) <= 1e-12, key);
+  }
+  assert.equal(actual.finiteCount, expected.finiteCount);
+  assert.equal(actual.meanCounts, 0);
+  assert.equal(actual.rmsCounts, Math.sqrt(2));
+  assert.equal(actual.sigmaCounts, Math.sqrt(2));
+  assert.equal(actual.skewness, 0);
+  assert.ok(Math.abs((actual.excessKurtosis as number) + 1.3) <= 1e-12);
+  assert.equal(diagnostics.gauss.nrmse, null, "a non-positive amplitude has no NRMSE");
+  assert.equal(diagnostics.gauss.rmsOverSigmaB, Math.sqrt(2));
+});
+
+test("S22 residual higher moments remain stable around a large residual offset", () => {
+  const residualValues = [1e12 - 2, 1e12 - 1, 1e12, 1e12 + 1, 1e12 + 2];
+  const comparison = compareModelResiduals(
+    { values: residualValues, width: residualValues.length, height: 1 },
+    { x0: 0, y0: 0, width: residualValues.length, height: 1 },
+    fixedFit(zeroGauss()),
+    null,
+  );
+  const actual = comparison.residualDiagnostics?.gauss.stats;
+  const expected = naiveResidualStats(residualValues);
+  assert.notEqual(actual, null);
+  assert.notEqual(expected, null);
+  if (actual === null || actual === undefined || expected === null) throw new Error("unreachable");
+  assert.ok(Math.abs((actual.skewness as number) - (expected.skewness as number)) <= 1e-12);
+  assert.ok(Math.abs((actual.excessKurtosis as number) - (expected.excessKurtosis as number)) <= 1e-12);
+  assert.ok((actual.excessKurtosis as number) >= -2);
+});
+
+test("S22 residual normalizations and histogram bins use the fixed sigma_B edges", () => {
+  const residualValues = [-9, -8, -7.9, 0, 7.9, 8, 9];
+  const width = residualValues.length;
+  // The Gaussian model is identically zero, so each residual is the input
+  // value bit-for-bit, including both exported histogram edge values.
+  const values = residualValues;
+  const comparison = compareModelResiduals(
+    { values, width, height: 1 },
+    { x0: 0, y0: 0, width, height: 1 },
+    fixedFit(zeroGauss()),
+    fixedFit(zeroSuperGauss(1)),
+    { noise: { sigmaCounts: 1, scaleSource: "iqr", floorApplied: false } },
+  );
+  const diagnostics = comparison.residualDiagnostics;
+  assert.notEqual(diagnostics, null);
+  if (diagnostics === null) throw new Error("unreachable");
+  const expectedRms = Math.sqrt(residualValues.reduce((sum, value) => sum + value * value, 0) / residualValues.length);
+  assert.equal(diagnostics.gauss.rmsCounts, expectedRms);
+  assert.equal(diagnostics.gauss.nrmse, null);
+  assert.equal(diagnostics.gauss.rmsOverSigmaB, expectedRms);
+  assert.equal(diagnostics.superGauss?.nrmse, null, "the super-Gaussian uses the Gaussian amplitude");
+  assert.equal(diagnostics.superGauss?.rmsOverSigmaB, expectedRms);
+  const histogram = diagnostics.gauss.histogram;
+  assert.notEqual(histogram, null);
+  if (histogram === null) throw new Error("unreachable");
+  assert.equal(histogram.binEdgesCounts.length, 66);
+  assert.equal(histogram.binEdgesCounts[0], -8);
+  assert.equal(histogram.binEdgesCounts[65], 8);
+  assert.equal(values[5], histogram.binEdgesCounts[65], "the residual lands exactly on the exported upper edge");
+  assert.equal(histogram.underflowCount, 1);
+  assert.equal(histogram.overflowCount, 1, "the symmetric value above the upper edge overflows");
+  assert.equal(histogram.counts[0], 2, "-8 and -7.9 share the first in-range bin");
+  assert.equal(histogram.counts[32], 1, "zero uses the central bin");
+  assert.equal(histogram.counts[64], 2, "7.9 and the inclusive upper edge share the final bin");
+  assert.equal(histogram.counts.reduce((sum, count) => sum + count, 0), 5);
+});
+
+test("S22 residual diagnostics share display geometry and histogram edges between converged models", () => {
+  const width = 260;
+  const height = 3;
+  const values = new Array<number>(width * height);
+  for (let y = 0; y < height; y += 1) {
+    for (let x = 0; x < width; x += 1) values[y * width + x] = x + 10 * y;
+  }
+  const comparison = compareModelResiduals(
+    { values, width, height },
+    { x0: 0, y0: 0, width, height },
+    fixedFit(zeroGauss()),
+    fixedFit(zeroSuperGauss(SUPER_GAUSS_N_MAX)),
+    { noise: { sigmaCounts: 1, scaleSource: "mad", floorApplied: false } },
+  );
+  const diagnostics = comparison.residualDiagnostics;
+  assert.notEqual(diagnostics, null);
+  if (diagnostics === null || diagnostics.superGauss === null) throw new Error("unreachable");
+  const superGauss = diagnostics.superGauss;
+  assert.equal(superGauss.display.blockSizePx, 2);
+  assert.equal(superGauss.display.width, 130);
+  assert.equal(superGauss.display.height, 2);
+  assert.deepEqual(superGauss.display.values, directBlockMeans(values, width, height, 2));
+  assert.deepEqual(superGauss.histogram?.binEdgesCounts, diagnostics.gauss.histogram?.binEdgesCounts);
+  assert.equal(superGauss.nAtBoundary, true);
+
+  const interior = compareModelResiduals(
+    { values, width, height },
+    { x0: 0, y0: 0, width, height },
+    fixedFit(zeroGauss()),
+    fixedFit(zeroSuperGauss(1)),
+    { noise: { sigmaCounts: 1, scaleSource: "mad", floorApplied: false } },
+  );
+  assert.equal(interior.residualDiagnostics?.superGauss?.nAtBoundary, false);
+});
+
+test("S22 shared residual walk checks finiteness when model intermediates can overflow", () => {
+  const largeCoordinate = 1.4e154;
+  const gauss = {
+    ...zeroGauss(),
+    centerXPx: -largeCoordinate,
+    centerYPx: -largeCoordinate,
+    sigmaMajorPx: 1e154,
+    sigmaMinorPx: 1e154,
+  };
+  const superGauss = {
+    ...zeroSuperGauss(1),
+    centerXPx: -largeCoordinate,
+    centerYPx: -largeCoordinate,
+    w1Px: 1e154,
+    w2Px: 1e154,
+  };
+  const comparison = compareModelResiduals(
+    { values: [1], width: 1, height: 1 },
+    { x0: 0, y0: 0, width: 1, height: 1 },
+    fixedFit(gauss),
+    fixedFit(superGauss),
+    { noise: { sigmaCounts: 1, scaleSource: "mad", floorApplied: false } },
+  );
+  assert.equal(comparison.gaussRmsCounts, 0);
+  assert.equal(comparison.residualDiagnostics?.gauss.stats, null, "the NaN residual is skipped");
+  assert.equal(comparison.residualDiagnostics?.gauss.histogram, null);
+});
+
+test("S22 shared residual walk preserves the legacy Gaussian RMS, maximum, and display grid exactly", () => {
+  const width = 260;
+  const height = 3;
+  const values = new Array<number>(width * height);
+  for (let y = 0; y < height; y += 1) {
+    for (let x = 0; x < width; x += 1) values[y * width + x] = 12 + 0.4 * x - 0.7 * y + ((13 * x + y) % 5);
+  }
+  values[width + 17] = Number.NaN;
+  const gauss = {
+    amplitudeCounts: 40,
+    backgroundCounts: 7,
+    backgroundSlopeXCountsPerPx: 0.08,
+    backgroundSlopeYCountsPerPx: -0.03,
+    centerXPx: 130.25,
+    centerYPx: 1.1,
+    sigmaMajorPx: 23,
+    sigmaMinorPx: 11,
+    thetaRad: 0.42,
+  };
+  const roi = { x0: 0, y0: 0, width, height };
+  const legacy = computeResidualOutput({ values, width, height }, roi, gauss);
+  const superGauss = {
+    ...zeroSuperGauss(1, 40),
+    centerXPx: 130.25,
+    centerYPx: 1.1,
+    w1Px: 23,
+    w2Px: 11,
+    thetaRad: 0.42,
+  };
+  const comparison = compareModelResiduals(
+    { values, width, height },
+    roi,
+    fixedFit(gauss),
+    fixedFit(superGauss),
+    { noise: { sigmaCounts: 1, scaleSource: "mad", floorApplied: false } },
+  );
+  const diagnostics = comparison.residualDiagnostics;
+  assert.notEqual(diagnostics, null);
+  if (diagnostics === null) throw new Error("unreachable");
+  assert.equal(comparison.gaussRmsCounts, legacy.rmsCounts);
+  assert.equal(diagnostics.gauss.rmsCounts, legacy.rmsCounts);
+  assert.equal(diagnostics.gauss.maxAbsCounts, legacy.maxAbsCounts);
+  assert.deepEqual(diagnostics.gauss.display, legacy.display);
+
+  let superGaussSumSquared = 0;
+  let superGaussFiniteCount = 0;
+  for (let y = roi.y0; y < roi.y0 + roi.height; y += 1) {
+    for (let x = roi.x0; x < roi.x0 + roi.width; x += 1) {
+      const value = values[y * width + x];
+      const residual = value - superGauss2dValueAt(superGauss, x, y);
+      if (!Number.isFinite(value) || !Number.isFinite(residual)) continue;
+      superGaussSumSquared += residual * residual;
+      superGaussFiniteCount += 1;
+    }
+  }
+  const naiveSuperGaussRms = Math.sqrt(superGaussSumSquared / superGaussFiniteCount);
+  assert.equal(comparison.superGaussRmsCounts, naiveSuperGaussRms);
+  assert.equal(comparison.relativeRmsReduction, (legacy.rmsCounts - naiveSuperGaussRms) / legacy.rmsCounts);
+
+  for (const variant of [
+    { label: "without a super-Gaussian", superGauss: null, noise: { sigmaCounts: 1, scaleSource: "mad" as const, floorApplied: false } },
+    {
+      label: "with a floored sigma_B",
+      superGauss: fixedFit(superGauss),
+      noise: { sigmaCounts: 1, scaleSource: "floor" as const, floorApplied: true },
+    },
+  ]) {
+    const genericComparison = compareModelResiduals({ values, width, height }, roi, fixedFit(gauss), variant.superGauss, {
+      noise: variant.noise,
+    });
+    const genericDiagnostics = genericComparison.residualDiagnostics;
+    assert.notEqual(genericDiagnostics, null, variant.label);
+    if (genericDiagnostics === null) throw new Error("unreachable");
+    assert.equal(genericComparison.gaussRmsCounts, legacy.rmsCounts, variant.label);
+    assert.equal(genericDiagnostics.gauss.rmsCounts, legacy.rmsCounts, variant.label);
+    assert.equal(genericDiagnostics.gauss.maxAbsCounts, legacy.maxAbsCounts, variant.label);
+    assert.deepEqual(genericDiagnostics.gauss.display, legacy.display, variant.label);
+  }
+});
+
+test("S22 residual null fallbacks cover super-Gaussian status, unusable sigma_B, and an empty finite domain", () => {
+  const values = [-1, 0, 1];
+  const image = { values, width: 3, height: 1 };
+  const roi = { x0: 0, y0: 0, width: 3, height: 1 };
+  const nonConverged = compareModelResiduals(
+    image,
+    roi,
+    fixedFit(zeroGauss()),
+    fixedFit(zeroSuperGauss(1), "max_iterations"),
+    { noise: { sigmaCounts: 1, scaleSource: "mad", floorApplied: false } },
+  );
+  assert.equal(nonConverged.residualDiagnostics?.superGauss, null);
+
+  const zeroScale = compareModelResiduals(
+    image,
+    roi,
+    fixedFit(zeroGauss()),
+    null,
+    { noise: { sigmaCounts: 1, scaleSource: "zero", floorApplied: false } },
+  );
+  assert.equal(zeroScale.residualDiagnostics?.gauss.rmsOverSigmaB, null);
+  const zeroScaleStats = zeroScale.residualDiagnostics?.gauss.stats;
+  const zeroScaleHistogram = zeroScale.residualDiagnostics?.gauss.histogram;
+  assert.notEqual(zeroScaleStats, null);
+  assert.notEqual(zeroScaleHistogram, null);
+  if (zeroScaleStats === null || zeroScaleHistogram === null) throw new Error("unreachable");
+  assert.equal(zeroScaleHistogram.binEdgesCounts[0], -1);
+  assert.equal(zeroScaleHistogram.binEdgesCounts.at(-1), 1);
+  assert.equal(
+    zeroScaleHistogram.counts.reduce((sum, count) => sum + count, 0) +
+      zeroScaleHistogram.underflowCount +
+      zeroScaleHistogram.overflowCount,
+    zeroScaleStats.finiteCount,
+  );
+  assert.equal(zeroScaleHistogram.counts[32], 1, "the fallback accumulation fills its central bin");
+
+  const flooredScale = compareModelResiduals(
+    image,
+    roi,
+    fixedFit(zeroGauss()),
+    null,
+    { noise: { sigmaCounts: 1, scaleSource: "floor", floorApplied: true } },
+  );
+  assert.equal(flooredScale.residualDiagnostics?.gauss.rmsOverSigmaB, null);
+
+  const superGaussFallback = compareModelResiduals(
+    { values: [0, 0, 0], width: 3, height: 1 },
+    { x0: 0, y0: 0, width: 3, height: 1 },
+    fixedFit(zeroGauss()),
+    fixedFit({ ...zeroSuperGauss(1, 100), w1Px: 1, w2Px: 1 }),
+    { noise: { sigmaCounts: 1, scaleSource: "zero", floorApplied: false } },
+  );
+  const superGaussFallbackDiagnostics = superGaussFallback.residualDiagnostics;
+  assert.notEqual(superGaussFallbackDiagnostics?.superGauss, null);
+  const gaussFallbackHistogram = superGaussFallbackDiagnostics?.gauss.histogram;
+  const superGaussFallbackHistogram = superGaussFallbackDiagnostics?.superGauss?.histogram;
+  const superGaussFallbackStats = superGaussFallbackDiagnostics?.superGauss?.stats;
+  assert.notEqual(gaussFallbackHistogram, null);
+  assert.notEqual(superGaussFallbackHistogram, null);
+  assert.notEqual(superGaussFallbackStats, null);
+  if (
+    gaussFallbackHistogram === null ||
+    gaussFallbackHistogram === undefined ||
+    superGaussFallbackHistogram === null ||
+    superGaussFallbackHistogram === undefined ||
+    superGaussFallbackStats === null ||
+    superGaussFallbackStats === undefined
+  ) {
+    throw new Error("unreachable");
+  }
+  assert.deepEqual(superGaussFallbackHistogram.binEdgesCounts, gaussFallbackHistogram.binEdgesCounts);
+  assert.notStrictEqual(superGaussFallbackHistogram.binEdgesCounts, gaussFallbackHistogram.binEdgesCounts);
+  assert.equal(gaussFallbackHistogram.binEdgesCounts[0], -100);
+  assert.equal(gaussFallbackHistogram.binEdgesCounts.at(-1), 100);
+  assert.equal(
+    superGaussFallbackHistogram.counts.reduce((sum, count) => sum + count, 0) +
+      superGaussFallbackHistogram.underflowCount +
+      superGaussFallbackHistogram.overflowCount,
+    superGaussFallbackStats.finiteCount,
+  );
+  assert.equal(superGaussFallbackHistogram.counts[0], 1, "the super-Gaussian fallback includes its lower-edge residual");
+  assert.equal(superGaussFallbackHistogram.underflowCount, 0);
+  assert.equal(superGaussFallbackHistogram.overflowCount, 0);
+
+  const empty = compareModelResiduals(
+    { values: [Number.NaN, Number.POSITIVE_INFINITY], width: 2, height: 1 },
+    { x0: 0, y0: 0, width: 2, height: 1 },
+    fixedFit(zeroGauss(1)),
+    null,
+    { noise: { sigmaCounts: 1, scaleSource: "mad", floorApplied: false } },
+  );
+  assert.equal(empty.residualDiagnostics?.gauss.stats, null);
+  assert.equal(empty.residualDiagnostics?.gauss.histogram, null);
+  assert.equal(empty.residualDiagnostics?.gauss.nrmse, null);
+  assert.equal(empty.residualDiagnostics?.gauss.rmsOverSigmaB, null);
 });

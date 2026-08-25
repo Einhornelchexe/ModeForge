@@ -27,6 +27,7 @@ import {
   type ImageColorMap,
   type ImageDrawTarget,
   type ImageProfileKey,
+  type ImageResidualMode,
 } from "./state.ts";
 import { S } from "./store.ts";
 import { renderBeamlineTab } from "./views/beamline.ts";
@@ -38,9 +39,15 @@ import {
   buildAnalysisCsv,
   buildAnalysisSummaryJson,
   buildProfilePlotData,
+  buildProfileResidualPlotData,
   imageRoiStateKey,
   IMAGE_PROFILE_KEYS,
+  normalizeResidualValue,
   profileLabel,
+  residualModeScaleFactor,
+  residualScaleFromGrids,
+  resolvedResidualMode,
+  selectedResidualScale,
   renderImageTab,
   roiFromFitEligible,
   resolveTypedRoi,
@@ -443,8 +450,8 @@ function stretchLimits(samples: Float32Array, loP: number, hiP: number): { lo: n
   return { lo, hi };
 }
 
-function colorBarTickLabel(value: number): string {
-  return `${sig(value, 4)} ${strings(S.lang).imgCountsUnit}`;
+function colorBarTickLabel(value: number, unit: string): string {
+  return `${sig(value, 4)} ${unit}`;
 }
 
 function paintVerticalLut(ctx: CanvasRenderingContext2D, x: number, y: number, width: number, height: number, map: ImageColorMap): void {
@@ -474,6 +481,7 @@ function drawColorBarBundle(
   pxScale: number,
   map: ImageColorMap,
   whitePoint: number,
+  unit: string,
 ): void {
   const strip = Math.max(1, Math.round(COLOR_BAR_STRIP_CSS * pxScale));
   const gap = Math.max(1, Math.round(COLOR_BAR_GAP_CSS * pxScale));
@@ -491,14 +499,45 @@ function drawColorBarBundle(
   for (const frac of COLOR_BAR_TICK_FRACS) {
     const ty = y + (1 - frac) * denom;
     ctx.textBaseline = frac === 1 ? "top" : frac === 0 ? "bottom" : "middle";
-    ctx.fillText(colorBarTickLabel(whitePoint * frac), tx, ty);
+    ctx.fillText(colorBarTickLabel(whitePoint * frac, unit), tx, ty);
   }
 }
 
-function layoutImageColorBar(imageCanvas: HTMLCanvasElement, map: ImageColorMap, whitePoint: number): void {
-  const wrap = document.querySelector<HTMLElement>("#img-colorbar");
-  const strip = document.querySelector<HTMLCanvasElement>("#img-colorbar-canvas");
-  const ticks = document.querySelector<HTMLElement>("#img-colorbar-ticks");
+type ColorBarElementIds = { wrap: string; strip: string; ticks: string };
+
+function paintSignedResidualLut(ctx: CanvasRenderingContext2D, width: number, height: number): void {
+  const img = ctx.createImageData(width, height);
+  let dst = 0;
+  const denom = Math.max(1, height - 1);
+  for (let row = 0; row < height; row += 1) {
+    const signed = 1 - (2 * row) / denom;
+    const mag = Math.abs(signed);
+    const rgb =
+      signed >= 0
+        ? [Math.round(14 + (242 - 14) * mag), Math.round(16 + (179 - 16) * mag), Math.round(22 + (61 - 22) * mag)]
+        : [Math.round(14 + (111 - 14) * mag), Math.round(16 + (168 - 16) * mag), Math.round(22 + (245 - 22) * mag)];
+    for (let col = 0; col < width; col += 1) {
+      img.data[dst] = rgb[0];
+      img.data[dst + 1] = rgb[1];
+      img.data[dst + 2] = rgb[2];
+      img.data[dst + 3] = 255;
+      dst += 4;
+    }
+  }
+  ctx.putImageData(img, 0, 0);
+}
+
+function layoutImageColorBar(
+  imageCanvas: HTMLCanvasElement,
+  map: ImageColorMap,
+  scale: number,
+  unit: string,
+  ids: ColorBarElementIds,
+  signed = false,
+): void {
+  const wrap = document.querySelector<HTMLElement>(ids.wrap);
+  const strip = document.querySelector<HTMLCanvasElement>(ids.strip);
+  const ticks = document.querySelector<HTMLElement>(ids.ticks);
   if (!wrap || !strip || !ticks) return;
   const cssH = Math.max(1, imageCanvas.clientHeight);
   wrap.style.height = `${cssH}px`;
@@ -512,29 +551,36 @@ function layoutImageColorBar(imageCanvas: HTMLCanvasElement, map: ImageColorMap,
   strip.style.width = `${COLOR_BAR_STRIP_CSS}px`;
   strip.style.height = `${cssH}px`;
   const ctx = strip.getContext("2d");
-  if (ctx) paintVerticalLut(ctx, 0, 0, strip.width, strip.height, map);
+  if (ctx) {
+    if (signed) paintSignedResidualLut(ctx, strip.width, strip.height);
+    else paintVerticalLut(ctx, 0, 0, strip.width, strip.height, map);
+  }
   ticks.replaceChildren();
-  for (const frac of COLOR_BAR_TICK_FRACS) {
+  const tickValues = signed ? [scale, 0, -scale] : COLOR_BAR_TICK_FRACS.map((frac) => scale * frac);
+  for (let index = 0; index < tickValues.length; index += 1) {
+    const value = tickValues[index];
+    const frac = signed ? 1 - index / Math.max(1, tickValues.length - 1) : COLOR_BAR_TICK_FRACS[index];
     const el = document.createElement("div");
     el.className = "img-colorbar-tick";
-    el.textContent = colorBarTickLabel(whitePoint * frac);
+    el.textContent = colorBarTickLabel(value, unit);
     el.style.top = `${(1 - frac) * 100}%`;
-    if (frac === 1) el.dataset.align = "start";
-    else if (frac === 0) el.dataset.align = "end";
+    if (index === 0) el.dataset.align = "start";
+    else if (index === tickValues.length - 1) el.dataset.align = "end";
     ticks.appendChild(el);
   }
 }
 
 function previewLayoutWidth(canvas: HTMLCanvasElement): number {
-  // Measure the CARD content box, not a fit-content wrapper around the
-  // canvas. Walking the stack first is circular once the stack shrinks to
-  // the canvas; the card width is independent of the bitmap scale.
-  const reserve = canvas.id === "img-canvas" ? COLOR_BAR_LAYOUT_W : 0;
-  const card = canvas.closest(".img-frame-card") ?? canvas.closest(".mf-card");
-  if (card instanceof HTMLElement && card.clientWidth > 0) {
-    const style = getComputedStyle(card);
+  // Residual maps share a two-column grid, so their independent map panel
+  // (rather than the card) is the stable width source. Every colorbar-owning
+  // stack reserves its strip and gap before its canvas is sized.
+  const residualPanel = canvas.closest(".img-residual-map-panel");
+  const reserve = canvas.id === "img-canvas" || canvas.closest(".img-residual-stack") ? COLOR_BAR_LAYOUT_W : 0;
+  const container = residualPanel ?? canvas.closest(".img-frame-card") ?? canvas.closest(".mf-card");
+  if (container instanceof HTMLElement && container.clientWidth > 0) {
+    const style = getComputedStyle(container);
     const pad = (Number.parseFloat(style.paddingLeft) || 0) + (Number.parseFloat(style.paddingRight) || 0);
-    return Math.max(1, card.clientWidth - pad - reserve);
+    return Math.max(1, container.clientWidth - pad - reserve);
   }
   const stack = canvas.closest(".img-preview-stack");
   if (stack instanceof HTMLElement && stack.clientWidth > 0) return Math.max(1, stack.clientWidth - reserve);
@@ -1497,7 +1543,13 @@ function drawRawImage(canvas: HTMLCanvasElement | null, pixels: Float32Array | n
   }
   if (!imagePreviewCache) return;
   ctx.putImageData(imagePreviewCache.bitmap, 0, 0);
-  layoutImageColorBar(canvas, colorMap, imagePreviewCache.whitePoint);
+  layoutImageColorBar(
+    canvas,
+    colorMap,
+    imagePreviewCache.whitePoint,
+    strings(S.lang).imgCountsUnit,
+    { wrap: "#img-colorbar", strip: "#img-colorbar-canvas", ticks: "#img-colorbar-ticks" },
+  );
   const overlayCanvas = document.querySelector<HTMLCanvasElement>("#img-overlay");
   if (!overlayCanvas) return;
   const { dpr, cssW, cssH } = sizeOverlayCanvas(overlayCanvas, canvas);
@@ -1527,9 +1579,28 @@ function residualCoversView(roi: { x0: number; y0: number; width: number; height
   return roi.x0 <= view.x0 && roi.y0 <= view.y0 && roi.x0 + roi.width >= view.x0 + view.width && roi.y0 + roi.height >= view.y0 + view.height;
 }
 
-function drawResidualImage(canvas: HTMLCanvasElement | null): void {
+function residualModeUnit(mode: ImageResidualMode): string {
+  const T = strings(S.lang);
+  return mode === "percent-peak" ? "%" : mode === "sigma" ? "σ_B" : T.imgCountsUnit;
+}
+
+function residualNormalizationFactor(): number {
   const result = S.img.result;
-  const display = result?.residuals?.display;
+  const input = {
+    amplitudeCounts: result?.fits.gauss2d.params?.amplitudeCounts,
+    sigmaCounts: result?.noise.sigmaCounts,
+    scaleSource: result?.noise.scaleSource,
+    floorApplied: result?.noise.floorApplied,
+  };
+  const factor = residualModeScaleFactor(resolvedResidualMode(S.img.residualMode, input), input);
+  // A disabled mode cannot be selected through the UI. This fallback only
+  // protects a stale display state while a result is replaced.
+  return factor ?? 1;
+}
+
+function drawResidualImage(canvas: HTMLCanvasElement | null, model: "gauss" | "superGauss" = "gauss"): void {
+  const result = S.img.result;
+  const display = model === "superGauss" ? result?.residuals?.superGauss?.display : result?.residuals?.display;
   if (!canvas || !display || display.width <= 0 || display.height <= 0 || display.values.length === 0) return;
   const overlay = overlayFromResult();
   const frameW = S.img.width;
@@ -1542,33 +1613,22 @@ function drawResidualImage(canvas: HTMLCanvasElement | null): void {
   canvas.width = view.width;
   canvas.height = view.height;
   canvas.style.imageRendering = view.width >= 256 || view.height >= 256 ? "auto" : "pixelated";
-  const preview = document.querySelector<HTMLCanvasElement>("#img-canvas");
-  if (covers && preview && preview.style.width) {
-    canvas.style.width = preview.style.width;
-    canvas.style.height = preview.style.height || "auto";
-    canvas.style.maxWidth = "100%";
-    canvas.style.maxHeight = "min(64vh, 640px)";
-    canvas.style.aspectRatio = `${view.width} / ${view.height}`;
-    canvas.style.objectFit = "contain";
-    canvas.style.objectPosition = "center";
-  } else {
-    fitCanvasLayout(canvas, view.width, view.height);
-  }
+  fitCanvasLayout(canvas, view.width, view.height);
   const ctx = canvas.getContext("2d");
   if (!ctx) return;
-  const absSamples = sortedFiniteView(
-    Float32Array.from(display.values, (value) => Math.abs(value)),
-    display.width,
-    view,
-  );
-  const maxAbs = stretchLimits(absSamples, 0, 0.9999).hi;
+  // S is ROI-wide and crop-invariant: never derive it from the visible
+  // window. residualScaleFromGrids also filters JSON-null empty blocks.
+  const autoScaleCounts = residualScaleFromGrids([result?.residuals?.display, result?.residuals?.superGauss?.display]);
+  const maxAbsCounts = selectedResidualScale(autoScaleCounts, S.img.residualManualScaleCounts);
+  const factor = residualNormalizationFactor();
+  const maxAbs = maxAbsCounts * factor;
   const img = ctx.createImageData(view.width, view.height);
   let dst = 0;
   for (let y = 0; y < view.height; y += 1) {
     const row = (view.y0 + y) * display.width + view.x0;
     for (let x = 0; x < view.width; x += 1) {
-      const value = display.values[row + x];
-      const t = maxAbs > 0 && Number.isFinite(value) ? Math.max(-1, Math.min(1, value / maxAbs)) : 0;
+      const value = normalizeResidualValue(display.values[row + x], factor);
+      const t = maxAbs > 0 && value !== null ? Math.max(-1, Math.min(1, value / maxAbs)) : 0;
       const mag = Math.abs(t);
       if (t >= 0) {
         img.data[dst] = Math.round(14 + (242 - 14) * mag);
@@ -1584,12 +1644,30 @@ function drawResidualImage(canvas: HTMLCanvasElement | null): void {
     }
   }
   ctx.putImageData(img, 0, 0);
-  const titleEl = document.querySelector("#img-residual-title");
+  layoutImageColorBar(
+    canvas,
+    "gray",
+    maxAbs,
+    residualModeUnit(
+      resolvedResidualMode(S.img.residualMode, {
+        amplitudeCounts: result?.fits.gauss2d.params?.amplitudeCounts,
+        sigmaCounts: result?.noise.sigmaCounts,
+        scaleSource: result?.noise.scaleSource,
+        floorApplied: result?.noise.floorApplied,
+      }),
+    ),
+    model === "superGauss"
+      ? { wrap: "#img-residual-super-colorbar", strip: "#img-residual-super-colorbar-canvas", ticks: "#img-residual-super-colorbar-ticks" }
+      : { wrap: "#img-residual-colorbar", strip: "#img-residual-colorbar-canvas", ticks: "#img-residual-colorbar-ticks" },
+    true,
+  );
+  const titleEl = document.querySelector(model === "gauss" ? "#img-residual-title" : "#img-residual-super-title");
   if (titleEl) {
     const T = strings(S.lang);
-    titleEl.textContent = covers
+    const windowTitle = covers
       ? T.imgResidualWindowLabel(imageView.width, imageView.height)
       : T.imgResidualRoiLabel(roi.width, roi.height);
+    titleEl.textContent = `${windowTitle} · ${model === "gauss" ? T.imgResidualGaussMap : T.imgResidualSuperMap}`;
   }
 }
 
@@ -2406,14 +2484,93 @@ function drawProfilePlot(canvas: HTMLCanvasElement | null, data: ProfilePlotData
   drawProfileLegend(ctx, legend);
 }
 
+// The profile-residual lane deliberately uses the same selected profile and
+// colors as the plot above it. It has no independent empty state: its canvas
+// is omitted by the view when neither released model curve is available.
+function drawProfileResidualPlot(
+  canvas: HTMLCanvasElement | null,
+  data: ReturnType<typeof buildProfileResidualPlotData>,
+): void {
+  if (!canvas || !data) return;
+  const T = strings(S.lang);
+  if (canvas.width !== PLOT2.W || canvas.height !== PLOT2.H) {
+    canvas.width = PLOT2.W;
+    canvas.height = PLOT2.H;
+  }
+  const ctx = canvas.getContext("2d");
+  if (!ctx) return;
+  ctx.setLineDash([]);
+  ctx.fillStyle = "#080c12";
+  ctx.fillRect(0, 0, PLOT2.W, PLOT2.H);
+  if (data.positions.length < 2) return;
+  const xLo = data.positions[0];
+  const xHi = data.positions[data.positions.length - 1];
+  const extent = finiteExtent([data.gauss, data.superGauss]);
+  if (!(xHi > xLo) || !extent) return;
+  const rawLo = Math.min(0, extent.lo);
+  const rawHi = Math.max(0, extent.hi);
+  const pad = Math.max(1e-12, (rawHi - rawLo) * 0.08);
+  const yLo = rawLo - pad;
+  const yHi = rawHi + pad;
+  const toX = (value: number): number => PLOT2.L + ((value - xLo) / (xHi - xLo)) * (PLOT2.R - PLOT2.L);
+  const toY = (value: number): number => PLOT2.B - ((value - yLo) / (yHi - yLo)) * (PLOT2.B - PLOT2.T);
+
+  ctx.font = '400 17px "IBM Plex Mono", ui-monospace, monospace';
+  ctx.strokeStyle = PROFILE_COLORS.grid;
+  ctx.lineWidth = 1;
+  ctx.fillStyle = PROFILE_COLORS.label;
+  ctx.textAlign = "right";
+  ctx.textBaseline = "middle";
+  const yStep = niceTickStep(yHi - yLo, 5);
+  if (yStep > 0) {
+    for (let value = Math.ceil(yLo / yStep) * yStep; value <= yHi + yStep * 1e-6; value += yStep) {
+      const y = toY(value);
+      ctx.beginPath();
+      ctx.moveTo(PLOT2.L, y);
+      ctx.lineTo(PLOT2.R, y);
+      ctx.stroke();
+      ctx.fillText(sig(value, 4), PLOT2.L - 10, y);
+    }
+  }
+  ctx.save();
+  ctx.strokeStyle = PROFILE_COLORS.axis;
+  ctx.setLineDash([2, 4]);
+  ctx.beginPath();
+  ctx.moveTo(PLOT2.L, toY(0));
+  ctx.lineTo(PLOT2.R, toY(0));
+  ctx.stroke();
+  ctx.restore();
+  if (data.superGauss) strokeProfileSeries(ctx, data.positions, data.superGauss, toX, toY, PROFILE_COLORS.superGauss, 1.8, [2, 6]);
+  if (data.gauss) strokeProfileSeries(ctx, data.positions, data.gauss, toX, toY, PROFILE_COLORS.gauss, 2.2, [9, 5]);
+  ctx.strokeStyle = PROFILE_COLORS.axis;
+  ctx.lineWidth = 1.2;
+  ctx.strokeRect(PLOT2.L + 0.5, PLOT2.T + 0.5, PLOT2.R - PLOT2.L - 1, PLOT2.B - PLOT2.T - 1);
+  ctx.fillStyle = PROFILE_COLORS.label;
+  ctx.font = '500 17px "IBM Plex Mono", ui-monospace, monospace';
+  ctx.textAlign = "right";
+  ctx.textBaseline = "alphabetic";
+  ctx.fillText(data.unit === "um" ? T.imgProfilePositionUm : T.imgProfilePositionPx, PLOT2.R, PLOT2.H - 12);
+  ctx.textAlign = "left";
+  ctx.fillText(T.imgProfileResidualIntensity, 12, 20);
+  const legend: Array<{ color: string; dash: number[]; label: string }> = [];
+  if (data.gauss) legend.push({ color: PROFILE_COLORS.gauss, dash: [9, 5], label: T.imgProfileGaussModel });
+  if (data.superGauss) legend.push({ color: PROFILE_COLORS.superGauss, dash: [2, 6], label: T.imgProfileSuperModel });
+  drawProfileLegend(ctx, legend);
+}
+
 function drawFieldCanvases(): void {
   if (S.tab === "image") {
     const imgState = S.img;
     drawRawImage(document.querySelector<HTMLCanvasElement>("#img-canvas"), imgState.render?.pixels, imgState.width, imgState.height);
     drawResidualImage(document.querySelector<HTMLCanvasElement>("#img-residual"));
+    drawResidualImage(document.querySelector<HTMLCanvasElement>("#img-residual-super"), "superGauss");
     drawProfilePlot(
       document.querySelector<HTMLCanvasElement>("#img-profile-canvas"),
       buildProfilePlotData(imgState.result, imgState.profileKey),
+    );
+    drawProfileResidualPlot(
+      document.querySelector<HTMLCanvasElement>("#img-profile-residual-canvas"),
+      buildProfileResidualPlotData(imgState.result, imgState.profileKey),
     );
     return;
   }
@@ -3160,6 +3317,19 @@ const actions: Record<string, (arg: string) => void> = {
     S.img = { ...S.img, profileKey: arg as ImageProfileKey };
     rerender();
   },
+  "img-residual-mode": (arg) => {
+    const mode: ImageResidualMode = arg === "percent-peak" ? "percent-peak" : arg === "sigma" ? "sigma" : "counts";
+    const result = S.img.result;
+    const input = {
+      amplitudeCounts: result?.fits.gauss2d.params?.amplitudeCounts,
+      sigmaCounts: result?.noise.sigmaCounts,
+      scaleSource: result?.noise.scaleSource,
+      floorApplied: result?.noise.floorApplied,
+    };
+    if (residualModeScaleFactor(mode, input) === null) return;
+    S.img = { ...S.img, residualMode: mode };
+    rerender();
+  },
   "img-profile-png": () => {
     const canvas = document.querySelector<HTMLCanvasElement>("#img-profile-canvas");
     if (!canvas || canvas.width === 0 || canvas.height === 0) return;
@@ -3227,6 +3397,7 @@ const actions: Record<string, (arg: string) => void> = {
       pxScale,
       resolveColorMap(S.img.colorMap),
       imagePreviewCache?.whitePoint ?? 0,
+      strings(S.lang).imgCountsUnit,
     );
     const a = document.createElement("a");
     a.href = out.toDataURL("image/png");
@@ -3627,6 +3798,23 @@ function applyField(key: string, raw: string): boolean {
       const next = resolveColorMap(raw);
       if (S.img.colorMap === next) return true;
       S.img = { ...S.img, colorMap: next };
+      return true;
+    }
+    case "imgResidualManualScale": {
+      numDraft(key, raw, (value) => {
+        const result = S.img.result;
+        const input = {
+          amplitudeCounts: result?.fits.gauss2d.params?.amplitudeCounts,
+          sigmaCounts: result?.noise.sigmaCounts,
+          scaleSource: result?.noise.scaleSource,
+          floorApplied: result?.noise.floorApplied,
+        };
+        const factor = residualModeScaleFactor(resolvedResidualMode(S.img.residualMode, input), input) ?? 1;
+        S.img = {
+          ...S.img,
+          residualManualScaleCounts: typeof value === "number" && value > 0 ? value / factor : null,
+        };
+      }, { optional: true });
       return true;
     }
     case "imgBgOffset":

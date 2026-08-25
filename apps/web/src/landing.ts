@@ -168,7 +168,7 @@ function render(): void {
         </div>
         <div style="display: flex; align-items: baseline; gap: 8px;">
           <span style="font-weight: 700; font-size: 17px;">ModeForge</span>
-          <span style="font: 500 10px 'IBM Plex Mono'; color: #8B94A3; border: 1px solid #232B37; border-radius: 4px; padding: 2px 6px; letter-spacing: 0.06em;">v2.0</span>
+          <span style="font: 500 10px 'IBM Plex Mono'; color: #8B94A3; border: 1px solid #232B37; border-radius: 4px; padding: 2px 6px; letter-spacing: 0.06em;">v2.1</span>
         </div>
       </a>
       <div style="flex: 1;"></div>

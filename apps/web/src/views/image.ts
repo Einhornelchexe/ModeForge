@@ -40,9 +40,16 @@
 import type { ImageAnalysisResult } from "../../../../packages/api/src/index.ts";
 import { esc, sig } from "../format.ts";
 import type { Strings } from "../i18n.ts";
-import { bgRectEditorAvailable, normalizeImageDrawTarget, type BgRect, type DarkError, type ImageProfileKey } from "../state.ts";
+import {
+  bgRectEditorAvailable,
+  normalizeImageDrawTarget,
+  type BgRect,
+  type DarkError,
+  type ImageProfileKey,
+  type ImageResidualMode,
+} from "../state.ts";
 import { S } from "../store.ts";
-import { bareInput, fieldCol, segBtn, warningCard, warnLines } from "./ui.ts";
+import { bareInput, fieldCol, segBtn, unitInput, warningCard, warnLines } from "./ui.ts";
 
 type Profile = ImageAnalysisResult["profiles"]["cutX"];
 type Moments = NonNullable<ImageAnalysisResult["moments"]["stageB"]>;
@@ -55,6 +62,73 @@ type PixelPitch = { xUm: number; yUm: number };
 type KvValue = string | { html: string };
 type KvRow = readonly [string, KvValue] | readonly [string, KvValue, string];
 type ProfileAxis = "x" | "y" | "rotated";
+
+export type ResidualDisplayGrid = { values: ReadonlyArray<number | null | undefined> };
+
+export type ResidualNormalizationInput = {
+  amplitudeCounts: number | null | undefined;
+  sigmaCounts: number | null | undefined;
+  scaleSource: string | null | undefined;
+  floorApplied: boolean | null | undefined;
+};
+
+export type ResidualModeAvailability = {
+  percentPeakDisabled: boolean;
+  percentPeakReason: "amplitude" | null;
+  sigmaDisabled: boolean;
+  sigmaReason: "sigma" | "zero" | "floor" | null;
+};
+
+// These display helpers intentionally operate on the block means supplied by
+// the engine. Every mode is a single linear relabeling of the same values.
+export function residualModeAvailability(input: ResidualNormalizationInput): ResidualModeAvailability {
+  const amplitudeOk = typeof input.amplitudeCounts === "number" && Number.isFinite(input.amplitudeCounts) && input.amplitudeCounts > 0;
+  const sigmaOk = typeof input.sigmaCounts === "number" && Number.isFinite(input.sigmaCounts) && input.sigmaCounts > 0;
+  const sigmaReason = !sigmaOk ? "sigma" : input.scaleSource === "zero" ? "zero" : input.floorApplied ? "floor" : null;
+  return {
+    percentPeakDisabled: !amplitudeOk,
+    percentPeakReason: amplitudeOk ? null : "amplitude",
+    sigmaDisabled: sigmaReason !== null,
+    sigmaReason,
+  };
+}
+
+export function residualModeScaleFactor(mode: ImageResidualMode, input: ResidualNormalizationInput): number | null {
+  const availability = residualModeAvailability(input);
+  if (mode === "counts") return 1;
+  if (mode === "percent-peak") return availability.percentPeakDisabled ? null : 100 / (input.amplitudeCounts as number);
+  return availability.sigmaDisabled ? null : 1 / (input.sigmaCounts as number);
+}
+
+export function resolvedResidualMode(mode: ImageResidualMode, input: ResidualNormalizationInput): ImageResidualMode {
+  const availability = residualModeAvailability(input);
+  if (mode === "percent-peak" && availability.percentPeakDisabled) return "counts";
+  if (mode === "sigma" && availability.sigmaDisabled) return "counts";
+  return mode;
+}
+
+export function residualScaleFromGrids(grids: ReadonlyArray<ResidualDisplayGrid | null | undefined>): number {
+  let scale = 0;
+  for (const grid of grids) {
+    for (const value of grid?.values ?? []) {
+      // JSON sanitizes empty engine blocks to null. It is crucial that these
+      // do not become Math.abs(null) === 0 samples in the shared S scale.
+      if (typeof value !== "number" || !Number.isFinite(value)) continue;
+      scale = Math.max(scale, Math.abs(value));
+    }
+  }
+  return scale;
+}
+
+export function selectedResidualScale(autoScaleCounts: number, manualScaleCounts: number | null | undefined): number {
+  return typeof manualScaleCounts === "number" && Number.isFinite(manualScaleCounts) && manualScaleCounts > 0
+    ? manualScaleCounts
+    : autoScaleCounts;
+}
+
+export function normalizeResidualValue(value: number | null | undefined, factor: number | null): number | null {
+  return typeof value === "number" && Number.isFinite(value) && factor !== null ? value * factor : null;
+}
 
 // ── pure result exporters (no DOM, tested in tests/unit/image-view-export) ──
 
@@ -75,9 +149,35 @@ export type ImageAnalysisExportContext = { bgRects: readonly BgRect[] };
 export function buildAnalysisSummaryJson(result: ImageAnalysisResult, context: ImageAnalysisExportContext): string {
   const released = result.moments.stageB;
   const releasedOk = released !== null && released.valid;
+  const superGaussFit = result.fits.superGauss2d;
+  // A failed fit can retain its last iterate. Do not export that provisional
+  // exponent as a measured super-Gaussian parameter.
+  const superGaussN = superGaussFit?.status === "converged" ? superGaussFit.params?.superGaussN ?? null : null;
   const releasedEntry = releasedOk
     ? { d4SigmaMajorPx: released.d4SigmaMajorPx, d4SigmaMinorPx: released.d4SigmaMinorPx }
     : { suppressedReason: result.moments.suppressionReason ?? null };
+  const residual = result.residuals;
+  const residualSummary = residual
+    ? {
+        gaussian: {
+          rmsCounts: residual.rmsCounts,
+          maxAbsCounts: residual.maxAbsCounts,
+          nrmse: residual.nrmse,
+          rmsOverSigmaB: residual.rmsOverSigmaB,
+          stats: residual.stats,
+        },
+        superGaussian: residual.superGauss
+          ? {
+              rmsCounts: residual.superGauss.rmsCounts,
+              maxAbsCounts: residual.superGauss.maxAbsCounts,
+              nrmse: residual.superGauss.nrmse,
+              rmsOverSigmaB: residual.superGauss.rmsOverSigmaB,
+              stats: residual.superGauss.stats,
+              nAtBoundary: residual.superGauss.nAtBoundary,
+            }
+          : null,
+      }
+    : null;
   const summary = {
     releasedD4sigma: releasedEntry,
     physical: result.moments.physical ?? (releasedOk ? result.fits.physical ?? null : null),
@@ -92,6 +192,10 @@ export function buildAnalysisSummaryJson(result: ImageAnalysisResult, context: I
     peakToBackgroundNoise: result.aperture.peakToBackgroundNoise,
     residualRmsCounts: result.residuals?.rmsCounts ?? null,
     residualMaxAbsCounts: result.residuals?.maxAbsCounts ?? null,
+    // Every scalar below names the full-resolution finite-ROI domain instead
+    // of implying a fit-domain fallback.
+    residualsFullResolutionFiniteRoi: residualSummary,
+    superGaussN,
     roi: {
       source: result.roi.source,
       x0: result.roi.rect.x0,
@@ -140,6 +244,27 @@ export function buildAnalysisCsv(result: ImageAnalysisResult): string {
   rows.push(["peak_to_background_noise", dash(result.aperture.peakToBackgroundNoise)]);
   rows.push(["residual_rms_counts", dash(result.residuals?.rmsCounts ?? null)]);
   rows.push(["residual_max_abs_counts", dash(result.residuals?.maxAbsCounts ?? null)]);
+  const residual = result.residuals;
+  const superGaussFit = result.fits.superGauss2d;
+  const superGaussN = superGaussFit?.status === "converged" ? superGaussFit.params?.superGaussN ?? null : null;
+  const addResidualDomainRows = (
+    prefix: "residual_full_resolution_finite_roi_gauss" | "residual_full_resolution_finite_roi_super_gauss",
+    values: NonNullable<ImageAnalysisResult["residuals"]> | NonNullable<NonNullable<ImageAnalysisResult["residuals"]>["superGauss"]> | null,
+  ): void => {
+    rows.push([`${prefix}_rms_counts`, dash(values?.rmsCounts ?? null)]);
+    rows.push([`${prefix}_max_abs_counts`, dash(values?.maxAbsCounts ?? null)]);
+    rows.push([`${prefix}_nrmse`, dash(values?.nrmse ?? null)]);
+    rows.push([`${prefix}_rms_over_sigma_b`, dash(values?.rmsOverSigmaB ?? null)]);
+    rows.push([`${prefix}_mean_counts`, dash(values?.stats?.meanCounts ?? null)]);
+    rows.push([`${prefix}_sigma_counts`, dash(values?.stats?.sigmaCounts ?? null)]);
+    rows.push([`${prefix}_skewness`, dash(values?.stats?.skewness ?? null)]);
+    rows.push([`${prefix}_excess_kurtosis`, dash(values?.stats?.excessKurtosis ?? null)]);
+    rows.push([`${prefix}_finite_count`, dash(values?.stats?.finiteCount ?? null)]);
+  };
+  addResidualDomainRows("residual_full_resolution_finite_roi_gauss", residual);
+  addResidualDomainRows("residual_full_resolution_finite_roi_super_gauss", residual?.superGauss ?? null);
+  rows.push(["super_gauss_n", dash(superGaussN)]);
+  rows.push(["super_gauss_n_at_boundary", dash(residual?.superGauss?.nAtBoundary ?? null)]);
   rows.push(["roi_source", dash(result.roi.source)]);
   rows.push(["roi_x0", dash(result.roi.rect.x0)]);
   rows.push(["roi_y0", dash(result.roi.rect.y0)]);
@@ -972,6 +1097,14 @@ export type ProfilePlotData = {
   peak: { position: number; value: number } | null;
 };
 
+export type ProfileResidualPlotData = {
+  key: ImageProfileKey;
+  unit: "px" | "um";
+  positions: number[];
+  gauss: number[] | null;
+  superGauss: number[] | null;
+};
+
 // The line the engine sampled: analyze.ts picks the released stage-B
 // centroid/theta first and falls back to the converged Gauss fit. The third
 // engine fallback (brightest ROI pixel) needs the pixel data and is not
@@ -1099,6 +1232,25 @@ export function buildProfilePlotData(res: ImageAnalysisResult | null, wanted: Im
   };
 }
 
+// The residual lane follows the one selected profile chip. It shares the
+// profile's measured samples and computes no fit: R(x') is simply measured
+// minus each curve the existing profile builder already supplied.
+export function buildProfileResidualPlotData(
+  res: ImageAnalysisResult | null,
+  wanted: ImageProfileKey,
+): ProfileResidualPlotData | null {
+  const plot = buildProfilePlotData(res, wanted);
+  if (!plot) return null;
+  const subtract = (model: number[] | null): number[] | null =>
+    model === null ? null : plot.measured.map((value, index) => value - (model[index] ?? Number.NaN));
+  const gauss = subtract(plot.gauss);
+  const superGauss = subtract(plot.superGauss);
+  if (gauss === null && superGauss === null) return null;
+  const hasFiniteResidual = (series: number[] | null): boolean => series?.some((value) => Number.isFinite(value)) ?? false;
+  if (!hasFiniteResidual(gauss) && !hasFiniteResidual(superGauss)) return null;
+  return { key: plot.key, unit: plot.unit, positions: plot.positions.slice(), gauss, superGauss };
+}
+
 // ── honest suggestion iteration (item 2) ──────────────────────────────────
 //
 // The engine emits a fresh suggested ROI after every run, and the first one
@@ -1213,6 +1365,7 @@ function profilePlotPanel(T: Strings, res: ImageAnalysisResult | null): string {
     segBtn("img-profile", key, profileLabel(T, key), key === active, res.profiles[key] === null ? " disabled" : ""),
   ).join("");
   const data = buildProfilePlotData(res, S.img.profileKey);
+  const residualData = buildProfileResidualPlotData(res, S.img.profileKey);
   const notes: string[] = [];
   if (!data) {
     notes.push(T.imgProfileMissing);
@@ -1229,7 +1382,141 @@ function profilePlotPanel(T: Strings, res: ImageAnalysisResult | null): string {
       </div>
       <div class="mf-seg img-profile-chips">${chips}</div>
       <canvas id="img-profile-canvas" class="img-plot-canvas"></canvas>
+      ${residualData ? `<div class="mf-sec-title">${esc(T.imgProfileResidualLane)}</div><canvas id="img-profile-residual-canvas" class="img-plot-canvas"></canvas>` : ""}
       ${notes.map((note) => `<div class="mf-note">${esc(note)}</div>`).join("")}
+    </div>`;
+}
+
+// This panel only condenses gates and diagnostics that the engine already
+// emitted. Its grouping and color make existing signals easier to scan; it
+// deliberately creates no additional release verdict.
+export function qualityBox(T: Strings, res: ImageAnalysisResult): string {
+  const peak = peakToBackgroundNoiseDisplay(res.aperture.peakToBackgroundNoise);
+  const peakOk = !res.aperture.gates.multiPeak.detected;
+  const peakRow: KvRow = peak === null ? [T.imgPeakToBackground, T.imgSigmaBUnmeasurable, "#97A1B2"] : [T.imgPeakToBackground, peak];
+  const momentRelease = res.moments.suppressionReason === null ? T.imgValid : suppressionLabel(T, res.moments.suppressionReason);
+  const group = (title: string, rows: KvRow[]): string =>
+    `<div class="img-quality-group"><div class="mf-sec-title">${esc(title)}</div>${kvBlock(rows)}</div>`;
+  return `<div class="mf-card img-panel img-quality-box">
+      <div class="mf-card-title">${esc(T.imgQualityBox)}</div>
+      ${group(T.imgRawStats, [
+        [T.imgSaturated, `${res.raw.saturatedCount} · ${percent(res.raw.saturatedFraction)}`, res.raw.saturatedCount > 0 ? "#F2B33D" : "#97A1B2"],
+        [T.imgClippingSuspect, yesNo(T, res.raw.clippingSuspect), res.raw.clippingSuspect ? "#F2B33D" : "#97A1B2"],
+        [T.imgHotPixels, String(res.raw.hotPixelCandidateCount), res.raw.hotPixelCandidateCount > 0 ? "#F2B33D" : "#97A1B2"],
+        [T.imgEdgeTouch, yesNo(T, res.raw.edgeTouch), res.raw.edgeTouch ? "#F2B33D" : "#97A1B2"],
+      ])}
+      ${group(T.imgAperture, [
+        [T.imgGateMultiPeak, `${peakOk ? T.imgPass : T.imgFail} · ${res.aperture.gates.multiPeak.significantPeakCount}`, gateTone(peakOk)],
+        peakRow,
+      ])}
+      ${group(T.imgQualityStability, [
+        [T.imgUndeterminable, yesNo(T, res.stability.undeterminable), res.stability.undeterminable ? "#F2B33D" : "#97A1B2"],
+        [T.imgFullFrame, yesNo(T, res.stability.fullFrame)],
+        [T.imgGeometryReleasable, yesNo(T, res.fits.gauss2d.geometryReleasable), res.fits.gauss2d.geometryReleasable ? "#5CE1A0" : "#F2B33D"],
+        [T.imgMomentSuppression, momentRelease, res.moments.suppressionReason === null ? "#5CE1A0" : "#F2B33D"],
+      ])}
+    </div>`;
+}
+
+// These presentation-only bounds make the interpretation bands explicit;
+// values in the interval between them intentionally receive no beam-shape claim.
+const SUPER_GAUSS_GAUSSIAN_INTERPRETATION_DELTA = 0.15;
+const SUPER_GAUSS_FLAT_TOP_INTERPRETATION_MIN = 1.5;
+
+export function superGaussInterpretation(
+  n: number | null | undefined,
+  nAtBoundary: boolean,
+): "gaussian" | "flat-top" | "boundary" | "no-interpretation" | null {
+  if (nAtBoundary) return "boundary";
+  if (typeof n !== "number" || !Number.isFinite(n)) return null;
+  if (Math.abs(n - 1) <= SUPER_GAUSS_GAUSSIAN_INTERPRETATION_DELTA) return "gaussian";
+  if (n >= SUPER_GAUSS_FLAT_TOP_INTERPRETATION_MIN) return "flat-top";
+  return "no-interpretation";
+}
+
+function comparisonMetricValue(T: Strings, gauss: number | null, superGauss: number | null, suffix = ""): KvValue {
+  const value = (label: string, metric: number | null): string =>
+    `<span class="img-model-metric"><b>${esc(label)}</b> ${esc(num(metric, 5))}${suffix ? esc(suffix) : ""} <small>${esc(T.imgFullResRoi)}</small></span>`;
+  return { html: `${value(T.imgGauss2d, gauss)}${value(T.imgSuperGauss2d, superGauss)}` };
+}
+
+// The comparison takes its new scalar metrics from residuals, never silently
+// falls back to fit-domain RMS values. The older modelComparison reduction is
+// retained exactly as an existing output and annotated with its fit status.
+export function modelComparisonBlock(T: Strings, res: ImageAnalysisResult): string {
+  const residual = res.residuals;
+  const superResidual = residual?.superGauss ?? null;
+  const superFit = res.fits.superGauss2d;
+  const superReady = superFit?.status === "converged" && superResidual !== null;
+  const n = superReady ? superFit?.params?.superGaussN ?? null : null;
+  const interpretation = superReady ? superGaussInterpretation(n, superResidual?.nAtBoundary ?? false) : null;
+  const interpretationText =
+    interpretation === "gaussian"
+      ? T.imgGaussianDescription
+      : interpretation === "flat-top"
+        ? T.imgFlatTopDescription
+        : interpretation === "boundary"
+          ? T.imgExponentBoundaryDescription
+          : interpretation === "no-interpretation"
+            ? T.imgExponentNoInterpretation
+          : null;
+  const unavailable = superReady ? null : fitStatusLabel(T, superFit?.status ?? null);
+  const comparison = res.metrics.modelComparison;
+  return `<div class="img-model-comparison">
+      <div class="img-model-exponent">
+        <div class="img-model-exponent-label">${esc(T.imgSuperGaussN)}</div>
+        <div class="img-model-exponent-value">${esc(num(superReady ? n : null, 5))}</div>
+        ${interpretationText ? `<div class="mf-note">${esc(interpretationText)}</div>` : ""}
+        ${unavailable ? `<div class="mf-note">${esc(unavailable)}</div>` : ""}
+      </div>
+      ${kvBlock([
+        [`${T.imgResidualRms} · ${T.imgFullResRoi}`, comparisonMetricValue(T, residual?.rmsCounts ?? null, superReady ? superResidual?.rmsCounts ?? null : null)],
+        [`${T.imgResidualNrmse} · ${T.imgFullResRoi}`, comparisonMetricValue(T, residual?.nrmse ?? null, superReady ? superResidual?.nrmse ?? null : null)],
+        [`${T.imgResidualRmsSigma} · ${T.imgFullResRoi}`, comparisonMetricValue(T, residual?.rmsOverSigmaB ?? null, superReady ? superResidual?.rmsOverSigmaB ?? null : null)],
+        [
+          T.imgModelCompare,
+          `${comparison?.relativeRmsReduction === null || comparison?.relativeRmsReduction === undefined ? "—" : percent(comparison.relativeRmsReduction)} · ${T.imgFitStatus}: ${fitStatusLabel(T, superFit?.status ?? null)}`,
+        ],
+      ])}
+    </div>`;
+}
+
+function residualHistogramModelBlock(
+  T: Strings,
+  label: string,
+  residual: NonNullable<ImageAnalysisResult["residuals"]> | NonNullable<NonNullable<ImageAnalysisResult["residuals"]>["superGauss"]>,
+  factor: number,
+  unit: string,
+): string {
+  const histogram = residual.histogram;
+  const stats = residual.stats;
+  if (!histogram || !stats) return "";
+  const edges = histogram.binEdgesCounts;
+  const lo = edges[0];
+  const hi = edges.at(-1);
+  return `<div class="img-residual-histogram-model">
+      <div class="mf-sec-title">${esc(label)}</div>
+      ${histogramSparkline(histogram.counts)}
+      <div class="img-hist-axis"><span>${esc(`${num(lo === undefined ? null : lo * factor, 5)} ${unit}`)}</span><span>${esc(`${num(hi === undefined ? null : hi * factor, 5)} ${unit}`)}</span></div>
+      <div class="img-hist-overflow"><span>${esc(T.imgHistogramUnderflow)}: ${esc(String(histogram.underflowCount))}</span><span>${esc(T.imgHistogramOverflow)}: ${esc(String(histogram.overflowCount))}</span></div>
+      ${kvBlock([
+        [`${T.imgMean} · ${T.imgFullResRoi}`, `${num(stats.meanCounts * factor, 5)} ${unit}`],
+        [`${T.imgResidualRms} · ${T.imgFullResRoi}`, `${num(stats.rmsCounts * factor, 5)} ${unit}`],
+        [`${T.imgResidualSigma} · ${T.imgFullResRoi}`, `${num(stats.sigmaCounts * factor, 5)} ${unit}`],
+        [T.imgSkewness, num(stats.skewness, 5)],
+        [T.imgExcessKurtosis, num(stats.excessKurtosis, 5)],
+        [T.imgFiniteCount, String(stats.finiteCount)],
+      ])}
+    </div>`;
+}
+
+function residualHistogramPanel(T: Strings, res: ImageAnalysisResult, factor: number, unit: string): string {
+  const residual = res.residuals;
+  if (!residual?.histogram || !residual.stats) return "";
+  return `<div class="mf-card img-panel img-residual-histogram">
+      <div class="mf-card-title">${esc(T.imgResidualHistogram)}</div>
+      ${residualHistogramModelBlock(T, T.imgResidualGaussMap, residual, factor, unit)}
+      ${residual.superGauss ? residualHistogramModelBlock(T, T.imgResidualSuperMap, residual.superGauss, factor, unit) : ""}
     </div>`;
 }
 
@@ -1501,7 +1788,6 @@ export function renderImageTab(T: Strings): string {
     })
     .join(" · ");
   const encircledRow = encircledHtml ? `${encircledHtml}${encircledAniso ? ` · ${esc(T.imgAnisoPxNote)}` : ""}` : "";
-  const modelCompare = res?.metrics.modelComparison;
   const momentsProfilesInner = res
     ? `<div class="mf-sec-title">${esc(T.imgStageB)}</div>${momentsBlock(
         T,
@@ -1532,11 +1818,6 @@ export function renderImageTab(T: Strings): string {
       )}
       <div class="mf-sec-title">${esc(T.imgFitWidth)}</div>${kvBlock([[T.imgFitWidth, fitWidthValue]])}
       ${encircledRow ? kvBlock([[T.imgEncircled, { html: encircledRow }]]) : ""}
-      ${
-        modelCompare
-          ? kvBlock([[T.imgModelCompare, modelCompare.relativeRmsReduction === null ? "—" : percent(modelCompare.relativeRmsReduction)]])
-          : ""
-      }
       <div class="mf-sec-title">${esc(T.imgAperture)}</div>${gateBlock(T, res)}
       <div class="mf-sec-title">${esc(T.imgStageA)}</div>${momentsBlock(T, stageA, [], pitch)}
       <div class="mf-sec-title">${esc(T.imgProfilesCut)}</div>
@@ -1555,9 +1836,10 @@ export function renderImageTab(T: Strings): string {
         [T.imgGauss2d, fitStatusLabel(T, gauss?.status), gauss?.converged ? "#5CE1A0" : "#F2B33D"],
         [T.imgSuperGauss2d, fitStatusLabel(T, superFit?.status ?? null), superFit?.converged ? "#5CE1A0" : "#97A1B2"],
         [T.imgIterations, gauss ? String(gauss.iterations) : "—"],
-        [T.imgResidualRms, counts(res.residuals?.rmsCounts ?? gauss?.residualRmsCounts ?? null)],
-        [T.imgResidualMax, counts(res.residuals?.maxAbsCounts ?? gauss?.residualMaxAbsCounts ?? null)],
+        [`${T.imgResidualRms} · ${T.imgFullResRoi}`, counts(res.residuals?.rmsCounts ?? null)],
+        [`${T.imgResidualMax} · ${T.imgFullResRoi}`, counts(res.residuals?.maxAbsCounts ?? null)],
       ])}
+      <div class="mf-sec-title">${esc(T.imgModelComparison)}</div>${modelComparisonBlock(T, res)}
       <div class="mf-sec-title">${esc(T.imgFitParams)}</div>${gaussParamsBlock(T, gauss?.params ?? null, pitch, res.fits.physical)}
       ${superParamsBlock(T, superFit?.params, pitch, res.fits.physical?.thetaRad)}`
     : "";
@@ -1596,11 +1878,65 @@ export function renderImageTab(T: Strings): string {
         </select>
       </label>`;
 
+  const residualInput: ResidualNormalizationInput = {
+    amplitudeCounts: res?.fits.gauss2d.params?.amplitudeCounts,
+    sigmaCounts: res?.noise.sigmaCounts,
+    scaleSource: res?.noise.scaleSource,
+    floorApplied: res?.noise.floorApplied,
+  };
+  const residualAvailability = residualModeAvailability(residualInput);
+  const effectiveResidualMode = resolvedResidualMode(st.residualMode, residualInput);
+  const residualFactor = residualModeScaleFactor(effectiveResidualMode, residualInput) ?? 1;
+  const residualUnit = effectiveResidualMode === "percent-peak" ? "%" : effectiveResidualMode === "sigma" ? "σ_B" : T.imgCountsUnit;
+  const sigmaReason =
+    residualAvailability.sigmaReason === "zero"
+      ? T.imgResidualModeSigmaZero
+      : residualAvailability.sigmaReason === "floor"
+        ? T.imgResidualModeSigmaFloor
+        : T.imgResidualModeSigmaNoSigma;
   const residualCard = res?.residuals
-    ? `<div class="mf-card img-frame-card">
-        <div class="mf-card-title" id="img-residual-title" style="margin-bottom: 10px;">${esc(residualTitle)}</div>
-        <canvas id="img-residual" class="img-canvas"></canvas>
-      </div>`
+      ? (() => {
+        const display = res.residuals.display;
+        const superDisplay = res.residuals.superGauss?.display ?? null;
+        const autoScaleCounts = residualScaleFromGrids([display, superDisplay]);
+        const activeScaleCounts = selectedResidualScale(autoScaleCounts, st.residualManualScaleCounts);
+        const manualScale = st.residualManualScaleCounts === null ? "" : sig(st.residualManualScaleCounts * residualFactor, 5);
+        const percentExtra = residualAvailability.percentPeakDisabled ? ` disabled title="${esc(T.imgResidualModePercentPeakUnavailable)}"` : "";
+        const sigmaExtra = residualAvailability.sigmaDisabled ? ` disabled title="${esc(sigmaReason)}"` : "";
+        const map = (label: string, canvasId: string, colorbarId: string, titleId = ""): string => `<div class="img-residual-map-panel">
+          <div class="img-residual-map-title"${titleId ? ` id="${titleId}"` : ""}>${esc(label)}</div>
+          <div class="img-residual-stack">
+            <canvas id="${canvasId}" class="img-canvas"></canvas>
+            <div class="img-colorbar" id="${colorbarId}">
+              <canvas id="${colorbarId}-canvas" class="img-colorbar-canvas"></canvas>
+              <div class="img-colorbar-ticks" id="${colorbarId}-ticks"></div>
+            </div>
+          </div>
+        </div>`;
+        return `<div class="mf-card img-frame-card img-residual-card">
+          <div class="img-preview-head">
+            <div class="mf-card-title">${esc(residualTitle)}</div>
+            <div class="img-residual-controls">
+              <div class="mf-seg img-residual-mode">
+                ${segBtn("img-residual-mode", "counts", T.imgResidualModeCounts, effectiveResidualMode === "counts")}
+                ${segBtn("img-residual-mode", "percent-peak", T.imgResidualModePercentPeak, effectiveResidualMode === "percent-peak", percentExtra)}
+                ${segBtn("img-residual-mode", "sigma", T.imgResidualModeSigma, effectiveResidualMode === "sigma", sigmaExtra)}
+              </div>
+              ${fieldCol(T.imgResidualManualScale, unitInput("imgResidualManualScale", manualScale, residualUnit, { small: true, placeholder: T.imgResidualAutoScale }))}
+            </div>
+          </div>
+          <div class="img-residual-maps">
+            ${map(`${residualTitle} · ${T.imgResidualGaussMap}`, "img-residual", "img-residual-colorbar", "img-residual-title")}
+            ${superDisplay ? map(`${residualTitle} · ${T.imgResidualSuperMap}`, "img-residual-super", "img-residual-super-colorbar", "img-residual-super-title") : ""}
+          </div>
+          <div class="img-residual-scale-line">
+            <span>${esc(T.imgResidualScale)}: ${esc(`${sig(activeScaleCounts * residualFactor, 5)} ${residualUnit}`)}</span>
+            <span>${esc(T.imgResidualMaxDisplayBlocks)}: ${esc(`${sig(autoScaleCounts * residualFactor, 5)} ${residualUnit}`)}</span>
+          </div>
+          ${!superDisplay ? `<div class="mf-note">${esc(T.imgResidualSuperUnavailable)}</div>` : ""}
+          ${display.blockSizePx > 1 || (superDisplay?.blockSizePx ?? 1) > 1 ? `<div class="mf-note">${esc(T.imgResidualBlockHint)}</div>` : ""}
+        </div>`;
+      })()
     : "";
 
   const frameRow = st.loaded
@@ -1698,7 +2034,9 @@ export function renderImageTab(T: Strings): string {
       ${res ? keyResults : ""}
       ${st.loaded ? `${exports}${frameRow}` : res ? "" : `<div class="mf-note-faint">${esc(T.imgNoData)}</div>`}
       ${profilePlotPanel(T, res)}
+      ${res ? residualHistogramPanel(T, res, residualFactor, residualUnit) : ""}
       ${res ? panel(T.imgDiagnostics, diagnosticsInner) : ""}
+      ${res ? qualityBox(T, res) : ""}
       ${res ? panel(T.imgBackgroundNoise, backgroundNoiseInner) : ""}
       ${res ? panel(T.imgRoiStability, stabilityInner) : ""}
       ${res ? panel(T.imgMomentsProfiles, momentsProfilesInner) : ""}

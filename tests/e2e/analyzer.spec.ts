@@ -266,6 +266,47 @@ test("gauss_released.tif renders a released D4sigma headline", async ({ page }) 
   await expect(headline).not.toContainText("suppressed");
 });
 
+test("residual diagnostics show a numeric signed colorbar, relabel modes, and preserve manual-scale drafts", async ({ page }) => {
+  await openAnalyzerTab(page);
+  await uploadImage(page, "gauss_released.tif");
+  const headline = await runAnalysis(page);
+  await expect(headline).toContainText("px", { timeout: 30_000 });
+
+  const ticks = page.locator("#img-residual-colorbar-ticks .img-colorbar-tick");
+  await expect(ticks).toHaveCount(3);
+  const countsTicks = await ticks.allTextContents();
+  expect(countsTicks.some((text) => /counts$/.test(text))).toBe(true);
+  expect(countsTicks.some((text) => /^-/.test(text))).toBe(true);
+
+  await page.locator('button[data-act="img-residual-mode"][data-arg="percent-peak"]').click();
+  await expect(page.locator('button[data-act="img-residual-mode"][data-arg="percent-peak"]')).toHaveClass(/active/);
+  await expect(ticks.first()).toContainText("%");
+  expect(await ticks.allTextContents()).not.toEqual(countsTicks);
+
+  await page.locator('button[data-act="img-residual-mode"][data-arg="counts"]').click();
+  const manualScale = page.locator('input[data-k="imgResidualManualScale"]');
+  await manualScale.fill("");
+  await manualScale.pressSequentially("0.");
+  await expect(manualScale).toHaveValue("0.");
+  await manualScale.fill("");
+  await manualScale.pressSequentially("1e");
+  await expect(manualScale).toHaveValue("1e");
+  await manualScale.fill("2");
+  await expect(manualScale).toHaveValue("2");
+  await expect(ticks.first()).toHaveText("2 counts");
+  await expect(ticks.last()).toHaveText("-2 counts");
+});
+
+test("flat_zero_noise.tif disables sigma_B residual normalization with its reason", async ({ page }) => {
+  await openAnalyzerTab(page);
+  await uploadImage(page, "flat_zero_noise.tif");
+  const headline = await runAnalysis(page);
+  await expect(headline).toContainText("px", { timeout: 30_000 });
+  const sigmaMode = page.locator('button[data-act="img-residual-mode"][data-arg="sigma"]');
+  await expect(sigmaMode).toBeDisabled();
+  await expect(sigmaMode).toHaveAttribute("title", /sigma_B normalization requires sigma_B > 0/);
+});
+
 test("two_lobe_suppressed.tif renders the suppressed headline", async ({ page }) => {
   await openAnalyzerTab(page);
   await uploadImage(page, "two_lobe_suppressed.tif");

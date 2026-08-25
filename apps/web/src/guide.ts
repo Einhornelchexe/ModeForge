@@ -179,7 +179,7 @@ function render(): void {
         <div class="lg-sub">${T.sub}</div>
         <div class="lg-sections">
           ${T.sections.map((section) => `<div><h2>${section.title}</h2><div class="lg-body">${section.body}</div></div>`).join("")}
-          <div class="lg-stand">ModeForge v2.0 · <a class="lg-link" href="https://github.com/Einhornelchexe/ModeForge" target="_blank" rel="noopener noreferrer">GitHub</a> · <a class="lg-link" href="https://github.com/Einhornelchexe/ModeForge/tree/main/docs/theory" target="_blank" rel="noopener noreferrer">docs/theory</a></div>
+          <div class="lg-stand">ModeForge v2.1 · <a class="lg-link" href="https://github.com/Einhornelchexe/ModeForge" target="_blank" rel="noopener noreferrer">GitHub</a> · <a class="lg-link" href="https://github.com/Einhornelchexe/ModeForge/tree/main/docs/theory" target="_blank" rel="noopener noreferrer">docs/theory</a></div>
         </div>
       </div>
 

@@ -1,6 +1,6 @@
 # ModeForge Architecture Conventions
 
-**Status:** active through the v2.0 release (S18 feature line + S20 hardening). S12 v2's 1:1 implementation of the "Frontend design V3 masterplan" Claude Design project remains the baseline layout contract; S18 adds the browser-local image analyzer as a sixth workbench tab under the same rules (see Rule 3's documented exception and Rule 11 below).
+**Status:** active through the v2.1 release (S18 feature line + S20 hardening + S22 residual diagnostics). S12 v2's 1:1 implementation of the "Frontend design V3 masterplan" Claude Design project remains the baseline layout contract; S18 adds the browser-local image analyzer as a sixth workbench tab under the same rules (see Rule 3's documented exception and Rule 11 below).
 
 ## Build Scope
 

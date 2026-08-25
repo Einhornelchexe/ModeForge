@@ -213,8 +213,8 @@ const WEDGE_PARAM_REL_TOLERANCE = 1e-3;
 // anything left to improve can reach.
 const WEDGE_COST_RELATIVE_FLOOR = 1e-20;
 const SIGMA_FLOOR_PX = 0.5;
-const SUPER_GAUSS_N_MIN = 0.5;
-const SUPER_GAUSS_N_MAX = 10;
+export const SUPER_GAUSS_N_MIN = 0.5;
+export const SUPER_GAUSS_N_MAX = 10;
 // Area of a Gaussian above half maximum: 2*pi*ln(2)*sigmaX*sigmaY; with an
 // isotropic start sigma that equals 2*pi*ln(2)*sigma0^2 pixel counts.
 const HALF_AREA_TWO_PI_LN2 = 2 * Math.PI * Math.LN2;

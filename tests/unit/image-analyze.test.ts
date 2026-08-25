@@ -208,6 +208,35 @@ test("S18a analyzeImage results are JSON-compatible: deep-equal round trip, no t
   assert.ok(result.residuals!.display.height <= 256);
 });
 
+test("S22 analyzeImage carries additive full-resolution residual diagnostics", () => {
+  const width = 64;
+  const height = 64;
+  const pixels = gaussian2dPixels(width, height, 31.4, 31.8, 7, 4, 0.35, 80, 3);
+  const next = makeLcg(22);
+  for (let i = 0; i < pixels.length; i += 1) pixels[i] += 0.3 * unitGaussian(next);
+  const result = analyzeImage({
+    pixels,
+    width,
+    height,
+    dtype: "float32",
+    background: { method: "manual-offset", offsetCounts: 3 },
+  });
+  const residuals = result.residuals;
+  assert.notEqual(residuals, null);
+  if (residuals === null) throw new Error("unreachable");
+  assert.notEqual(residuals.stats, null);
+  assert.notEqual(residuals.histogram, null);
+  assert.equal(residuals.stats!.finiteCount, width * height);
+  assert.equal(residuals.histogram!.binEdgesCounts.length, 66);
+  assert.ok(residuals.nrmse !== null && residuals.nrmse >= 0);
+  assert.ok(residuals.rmsOverSigmaB !== null && residuals.rmsOverSigmaB >= 0);
+  if (result.fits.superGauss2d?.status === "converged") {
+    assert.notEqual(residuals.superGauss, null);
+  } else {
+    assert.equal(residuals.superGauss, null);
+  }
+});
+
 test("S18a stage separation honesty: a two-lobe scene suppresses stage B but stage A diagnostics stay", () => {
   const width = 160;
   const height = 160;

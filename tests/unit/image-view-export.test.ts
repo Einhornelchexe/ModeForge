@@ -253,3 +253,54 @@ test("CW-08: both exporters carry the roi rect/source and symmetry scalars consi
   assert.equal(jsonSymmetry.axialAsymmetryX, symmetry.axialAsymmetryX);
   assert.equal(jsonSymmetry.axialAsymmetryY, symmetry.axialAsymmetryY);
 });
+
+test("CW-09: residual exports name the full-resolution finite-ROI domain and carry both models when available", () => {
+  const result = cleanResult();
+  const residual = result.residuals;
+  assert.ok(residual !== null, "precondition: the clean result emits residual diagnostics");
+  const csv = buildAnalysisCsv(result);
+  assert.equal(
+    csvRow(csv, "residual_full_resolution_finite_roi_gauss_rms_counts"),
+    `residual_full_resolution_finite_roi_gauss_rms_counts,"${dashNum(residual.rmsCounts)}"`,
+  );
+  assert.equal(
+    csvRow(csv, "residual_full_resolution_finite_roi_gauss_nrmse"),
+    `residual_full_resolution_finite_roi_gauss_nrmse,"${dashNum(residual.nrmse)}"`,
+  );
+  assert.equal(
+    csvRow(csv, "residual_full_resolution_finite_roi_gauss_rms_over_sigma_b"),
+    `residual_full_resolution_finite_roi_gauss_rms_over_sigma_b,"${dashNum(residual.rmsOverSigmaB)}"`,
+  );
+
+  const parsed = JSON.parse(buildAnalysisSummaryJson(result, EMPTY_EXPORT_CONTEXT)) as Record<string, unknown>;
+  const exported = parsed.residualsFullResolutionFiniteRoi as Record<string, unknown>;
+  const gaussian = exported.gaussian as Record<string, unknown>;
+  assert.equal(gaussian.rmsCounts, residual.rmsCounts);
+  assert.equal(gaussian.nrmse, residual.nrmse);
+  assert.equal(gaussian.rmsOverSigmaB, residual.rmsOverSigmaB);
+  assert.ok(residual.superGauss !== null, "precondition: the clean result emits converged super-Gaussian residual diagnostics");
+  assert.equal(
+    csvRow(csv, "residual_full_resolution_finite_roi_super_gauss_rms_counts"),
+    `residual_full_resolution_finite_roi_super_gauss_rms_counts,"${dashNum(residual.superGauss.rmsCounts)}"`,
+  );
+  const superGaussian = exported.superGaussian as Record<string, unknown>;
+  assert.equal(superGaussian.rmsCounts, residual.superGauss.rmsCounts);
+  assert.equal(superGaussian.nAtBoundary, residual.superGauss.nAtBoundary);
+});
+
+test("CW-10: super-Gaussian n is omitted consistently when its fit did not converge", () => {
+  const result = cleanResult();
+  const superFit = result.fits.superGauss2d;
+  assert.ok(superFit?.params !== null && superFit?.params !== undefined, "precondition: the clean result supplies super-Gaussian fit parameters");
+  const variant = {
+    ...result,
+    fits: {
+      ...result.fits,
+      superGauss2d: { ...superFit, status: "max_iterations", converged: false },
+    },
+  } as ImageAnalysisResult;
+  const csv = buildAnalysisCsv(variant);
+  const json = JSON.parse(buildAnalysisSummaryJson(variant, EMPTY_EXPORT_CONTEXT)) as Record<string, unknown>;
+  assert.equal(csvRow(csv, "super_gauss_n"), 'super_gauss_n,"—"');
+  assert.equal(json.superGaussN, null);
+});

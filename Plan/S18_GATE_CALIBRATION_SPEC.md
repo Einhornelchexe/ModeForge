@@ -1747,3 +1747,27 @@ Measured on the identical engine state and bit-identical inputs (input-buffer di
 - Consequence in the analyzer: of all result sections only `fits` (iterative 2D fit; `pow` in the super-Gaussian model and its Jacobian) and the fit-derived `metrics` entries move, at relative 1e-12..1e-11 (witness: clean 96x96 case, `backgroundCounts` 1.602851930456622e-8 vs 1.6028519305781742e-8; `relativeRmsReduction` differs from the 12th digit). `raw`, `background`, `noise`, `roi`, `stability`, `momentsRoiDiagnostic`, `moments`, `aperture`, `tierCheck`, `residuals`, `profiles`, `warnings` are bit-identical across the OSes. No released rounded number moves; release decisions are unaffected.
 - Consequence for oracles: the five S21 absence-regression digests are platform-scoped and pinned per platform (win32 and linux columns, both measured); the headless/case suites compare platform-robust values and pass on both OSes unchanged.
 - Backlog (v2.1): a `pow`-free fit formulation (`exp(n*log(E))`, measured bit-stable across OSes) would make the whole result object cross-platform bit-identical; deferred because it re-times every pinned digest for a last-bit gain.
+
+### 13.10 Residual diagnostics (release 2.1.0) [session record]
+
+Measured performance and review outcomes for the S22 residual-diagnostics stage,
+recorded here rather than re-derived:
+
+- Shared-walk performance, 2048x2048 synthetic frame, median of 3 runs: 192.1 ms
+  before the stage; 437.4 ms after the first draft (three separate full-resolution
+  walks); 361.5 ms after folding the three walks into one shared walk; 399.96 ms
+  final, after the review hardening pass added a bin-edge correction that costs
+  one comparison per pixel. Cost split of the folded walk: ~103 ms moment/max
+  accumulation, ~31 ms histograms, ~28 ms dual display grids.
+- The five S21 full-object absence digests were re-measured and re-pinned twice —
+  once after the schema landing, once after the review fixes changed histogram
+  binning and empty-domain nulls — each time on both platforms (win32 locally,
+  linux in the WSL lab).
+- Engine hardening review: 13 accepted findings (6 MED, 7 LOW).
+- UI review: 17 accepted findings (3 HIGH — an inverted multi-peak reading in the
+  quality box, a naming collision between residual sigma and the background noise
+  scale, and an interpretation line printed for a suppressed exponent — plus
+  4 MED, 10 LOW).
+- All findings folded in; final gates: 534/534 unit, 50/50 value-based repro
+  digests unmoved (additivity proof), Playwright 13/13, cases 60/60, headless
+  green.

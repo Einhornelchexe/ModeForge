@@ -113,7 +113,10 @@ function generateAll() {
   writeGray16Tiff("dark_pedestal.tif", 64, 48, () => 800);
   writeGray16Tiff("dark_small.tif", 16, 12, () => 100);
 
-  console.log(`[fixtures] wrote gauss_released.tif + two_lobe_suppressed.tif + ramp_background.tif + dark_flat.tif + dark_pedestal.tif + dark_small.tif -> ${FIXTURES_DIR}`);
+  // Flat zero noise scene: constant background (500) + Gaussian beam.
+  writeGray16Tiff("flat_zero_noise.tif", 64, 48, (x, y) => gaussianCounts(x, y, 31.5, 23.5, 3.5, 2.5, 20000, 500));
+
+  console.log(`[fixtures] wrote gauss_released.tif + two_lobe_suppressed.tif + ramp_background.tif + dark_flat.tif + dark_pedestal.tif + dark_small.tif + flat_zero_noise.tif -> ${FIXTURES_DIR}`);
 }
 
 generateAll();

@@ -61,10 +61,11 @@ import {
 } from "./aperture.ts";
 import {
   compareModelResiduals,
-  computeResidualOutput,
   mapGauss2dToPhysical,
   mapMomentsToPhysical,
   type PhysicalBeamGeometry,
+  type ResidualHistogram,
+  type ResidualStats,
 } from "./reporting.ts";
 import {
   computeEllipticity,
@@ -328,6 +329,20 @@ export type ImageAnalysisResult = {
     rmsCounts: number;
     maxAbsCounts: number;
     display: { width: number; height: number; blockSizePx: number; values: number[] };
+    nrmse: number | null;
+    rmsOverSigmaB: number | null;
+    stats: ResidualStats | null;
+    histogram: ResidualHistogram | null;
+    superGauss: {
+      rmsCounts: number;
+      maxAbsCounts: number;
+      nrmse: number | null;
+      rmsOverSigmaB: number | null;
+      display: { width: number; height: number; blockSizePx: number; values: number[] };
+      stats: ResidualStats | null;
+      histogram: ResidualHistogram | null;
+      nAtBoundary: boolean;
+    } | null;
   } | null;
   profiles: {
     cutX: ImagePlanarProfile | null;
@@ -1389,28 +1404,52 @@ export function analyzeImage(input: ImageAnalysisInput): ImageAnalysisResult {
     superGaussRmsCounts: number | null;
     relativeRmsReduction: number | null;
   } | null = null;
-  if (gaussFit.params !== null && superGaussFit !== null) {
-    try {
-      modelComparison = compareModelResiduals(correctedPlainer, roi, gaussFit, superGaussFit);
-    } catch {
-      modelComparison = null;
-    }
-  }
-
   let residuals: ImageAnalysisResult["residuals"] = null;
   if (gaussFit.params !== null) {
     try {
-      const residualOutput = computeResidualOutput(correctedPlainer, roi, gaussFit.params);
-      residuals = {
-        rmsCounts: residualOutput.rmsCounts,
-        maxAbsCounts: residualOutput.maxAbsCounts,
-        display: {
-          width: residualOutput.display.width,
-          height: residualOutput.display.height,
-          blockSizePx: residualOutput.display.blockSizePx,
-          values: Array.from(residualOutput.display.values),
-        },
-      };
+      const comparison = compareModelResiduals(correctedPlainer, roi, gaussFit, superGaussFit, { noise });
+      if (superGaussFit !== null) {
+        modelComparison = {
+          gaussRmsCounts: comparison.gaussRmsCounts,
+          superGaussRmsCounts: comparison.superGaussRmsCounts,
+          relativeRmsReduction: comparison.relativeRmsReduction,
+        };
+      }
+      const diagnostics = comparison.residualDiagnostics;
+      if (diagnostics !== null) {
+        residuals = {
+          rmsCounts: diagnostics.gauss.rmsCounts,
+          maxAbsCounts: diagnostics.gauss.maxAbsCounts,
+          display: {
+            width: diagnostics.gauss.display.width,
+            height: diagnostics.gauss.display.height,
+            blockSizePx: diagnostics.gauss.display.blockSizePx,
+            values: Array.from(diagnostics.gauss.display.values),
+          },
+          nrmse: diagnostics.gauss.nrmse,
+          rmsOverSigmaB: diagnostics.gauss.rmsOverSigmaB,
+          stats: diagnostics.gauss.stats,
+          histogram: diagnostics.gauss.histogram,
+          superGauss:
+            diagnostics.superGauss === null
+              ? null
+              : {
+                  rmsCounts: diagnostics.superGauss.rmsCounts,
+                  maxAbsCounts: diagnostics.superGauss.maxAbsCounts,
+                  nrmse: diagnostics.superGauss.nrmse,
+                  rmsOverSigmaB: diagnostics.superGauss.rmsOverSigmaB,
+                  display: {
+                    width: diagnostics.superGauss.display.width,
+                    height: diagnostics.superGauss.display.height,
+                    blockSizePx: diagnostics.superGauss.display.blockSizePx,
+                    values: Array.from(diagnostics.superGauss.display.values),
+                  },
+                  stats: diagnostics.superGauss.stats,
+                  histogram: diagnostics.superGauss.histogram,
+                  nAtBoundary: diagnostics.superGauss.nAtBoundary,
+                },
+        };
+      }
     } catch {
       residuals = null;
     }
