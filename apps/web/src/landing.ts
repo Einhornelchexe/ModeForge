@@ -40,7 +40,7 @@ const de: LandingStrings = {
   heroTitle1: "Laser-Strahlengänge entwerfen —",
   heroTitle2: "mit ehrlicher Physik.",
   heroSub:
-    "ModeForge propagiert reale Laserstrahlen — Gauß, elliptisch/astigmatisch oder als gemessener M²-Strahl — durch Linsen, Fenster und Blenden. Dazu Puls-Fluenz, Beugung im Feld-Modus und Warnungen, die nichts beschönigen. Kostenlos, quelloffen, ohne Installation.",
+    "ModeForge propagiert reale Laserstrahlen — Gauß, elliptisch/astigmatisch oder als gemessener M²-Strahl — durch Linsen, Fenster und Blenden. Dazu Puls-Fluenz, Beugung im Feld-Modus, Kamera-Strahlprofil-Analyse und Warnungen, die nichts beschönigen. Kostenlos, quelloffen, ohne Installation.",
   ctaLaunch: "Workbench starten",
   ctaPhysics: "Wie es rechnet",
   heroNote: "Keine Anmeldung · keine Server-Berechnung · Projekte als JSON-Dateien",
@@ -64,6 +64,7 @@ const de: LandingStrings = {
     { k: "OPT", v: "Zweilinsen-Optimierer" },
     { k: "IMP", v: "ZMX/AGF-Import" },
     { k: "FIT", v: "Messstrahl-Fit (M²)" },
+    { k: "IMG", v: "Strahlprofil-Analyse" },
     { k: "FLD", v: "skalare Feldpropagation" },
   ],
   features: [
@@ -72,6 +73,7 @@ const de: LandingStrings = {
     { tag: "OPTIMIZER", title: "Zweilinsen-Optimierer", desc: "Gittersuche über Linsenpaare mit Apertur-, Abstands- und Fluenz-Randbedingungen plus Sensitivitätsanalyse." },
     { tag: "IMPORT", title: "ZMX- & AGF-Import", desc: "Zemax-Sequenzdateien und Glaskataloge einlesen; unbekannte Gläser blockieren ehrlich statt still zu raten." },
     { tag: "FIT", title: "Messstrahl-Fit", desc: "Kaustik-Messungen einfügen, M² und Taille per Least-Squares zurückgewinnen, direkt als Strahlquelle übernehmen." },
+    { tag: "IMAGE", title: "Strahlprofil-Analyse", desc: "Kamerabilder (TIFF/PNG/PGM) auswerten: Hintergrund-Korrektur, zweite Momente (D4σ), Gauß- & Super-Gauß-Fit, Residuen-Karte — Freigabe-Gates halten unsichere Zahlen ehrlich zurück." },
     { tag: "FIELD", title: "Skalare Feldpropagation", desc: "Fresnel- und Winkelspektrum-Methoden zeigen Beugung an harten Blenden — mit Kreuzcheck gegen die paraxiale Envelope." },
   ],
   principles: [
@@ -88,7 +90,7 @@ const en: LandingStrings = {
   heroTitle1: "Design laser beamlines —",
   heroTitle2: "with honest physics.",
   heroSub:
-    "ModeForge propagates real laser beams — Gaussian, elliptical/astigmatic or measured M² beams — through lenses, windows and apertures. Plus pulse fluence, field-mode diffraction and warnings that never sugar-coat. Free, open source, nothing to install.",
+    "ModeForge propagates real laser beams — Gaussian, elliptical/astigmatic or measured M² beams — through lenses, windows and apertures. Plus pulse fluence, field-mode diffraction, camera beam-profile analysis and warnings that never sugar-coat. Free, open source, nothing to install.",
   ctaLaunch: "Launch Workbench",
   ctaPhysics: "How it computes",
   heroNote: "No sign-up · no server compute · projects are plain JSON files",
@@ -112,6 +114,7 @@ const en: LandingStrings = {
     { k: "OPT", v: "two-lens optimizer" },
     { k: "IMP", v: "ZMX/AGF import" },
     { k: "FIT", v: "measured-beam fit (M²)" },
+    { k: "IMG", v: "beam-profile analysis" },
     { k: "FLD", v: "scalar field propagation" },
   ],
   features: [
@@ -120,6 +123,7 @@ const en: LandingStrings = {
     { tag: "OPTIMIZER", title: "Two-lens optimizer", desc: "Grid search over lens pairs with aperture, separation and fluence constraints, plus sensitivity analysis." },
     { tag: "IMPORT", title: "ZMX & AGF import", desc: "Read Zemax sequential files and glass catalogs; unknown glasses block honestly instead of guessing silently." },
     { tag: "FIT", title: "Measured-beam fit", desc: "Paste caustic scans, recover M² and waist by least squares, and adopt the fit as your beam source." },
+    { tag: "IMAGE", title: "Beam-profile analysis", desc: "Analyze camera frames (TIFF/PNG/PGM): background correction, D4σ second moments, Gaussian & super-Gaussian fits, residual map — release gates honestly withhold uncertain numbers." },
     { tag: "FIELD", title: "Scalar field propagation", desc: "Fresnel and angular-spectrum methods reveal diffraction at hard apertures — cross-checked against the paraxial envelope." },
   ],
   principles: [

@@ -1,7 +1,7 @@
 {
   "name": "modeforge",
   "version": "2.0.0",
-  "license": "MIT",
+  "license": "SEE LICENSE IN LICENSING.md",
   "private": true,
   "type": "module",
   "description": "Browser-local laser beamline physics core and static ModeForge workbench.",

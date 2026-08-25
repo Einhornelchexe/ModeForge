@@ -1,3 +1,11 @@
+ModeForge is dual-licensed by part. Everything in this repository is
+MIT-licensed (text below) with one exception: the beam-profile image
+analyzer under packages/image is licensed AGPL-3.0-or-later, with
+commercial licenses available. See LICENSING.md for the exact map;
+the analyzer's own terms live in packages/image/LICENSE.
+
+----------------------------------------------------------------------
+
 MIT License
 
 Copyright (c) 2026 Patrick Feix (Rho-Labs)
