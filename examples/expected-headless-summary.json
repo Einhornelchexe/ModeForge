@@ -57,6 +57,18 @@
     "warningCount": 2
   },
   {
+    "file": "image_analysis_gauss.headless.json",
+    "kind": "image-analysis",
+    "released": true,
+    "suppressionReason": null,
+    "d4SigmaMajorPx": 3.99007871236,
+    "d4SigmaMinorPx": 3.99007871236,
+    "fitSigmaMajorPx": 0.999996,
+    "fitSigmaMinorPx": 0.999996,
+    "fitThetaRad": 0.785398,
+    "warningCount": 4
+  },
+  {
     "file": "measured-fit.headless.json",
     "kind": "measured-beam-fit",
     "ok": true,

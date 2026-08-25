@@ -47,6 +47,8 @@ import {
   type Complex,
 } from "../../optics/src/index.ts";
 import { optimizeTwoLensTelescope, type TwoLensOptimizationInput, type TwoLensOptimizationResult } from "../../optimizer/src/index.ts";
+import { analyzeImage, type ImageAnalysisInput, type ImageAnalysisResult } from "../../image/src/analyze.ts";
+import { decodeImageFile, type DecodedImage } from "../../image/src/index.ts";
 
 // UI-facing surface: apps/web imports exclusively from this module (enforced by
 // scripts/check-scope.mjs), so every contract type and display helper the
@@ -81,6 +83,19 @@ export type { OpticalSurface, ParaxialCard, SurfaceStackOptic } from "../../opti
 export type { LensCandidate, TwoLensOptimizationInput, TwoLensOptimizationResult, TwoLensSolution } from "../../optimizer/src/index.ts";
 export type { AgfParseResult, CatalogImportResult } from "../../catalog/src/index.ts";
 export type { TransverseMode } from "../../field/src/index.ts";
+export { analyzeImage } from "../../image/src/analyze.ts";
+// S21 stage A: ImageBackgroundInput / ImageRoiInput are the two widened input
+// members (each now also accepts an "auto" sentinel). They are named here so a
+// UI can type its own control state against them; no new function is added -
+// the automatic methods are selected through analyzeImage's existing input.
+export type {
+  ImageAnalysisInput,
+  ImageAnalysisResult,
+  ImageBackgroundInput,
+  ImageRoiInput,
+} from "../../image/src/analyze.ts";
+export { decodeImageFile } from "../../image/src/index.ts";
+export type { DecodedImage } from "../../image/src/index.ts";
 
 // Paraxial card of a surface-stack beamline component (S15) — UI-facing
 // helper so the workbench never builds optic internals itself.
@@ -206,7 +221,8 @@ export type HeadlessJobInput =
   | { kind: "agf-import"; text: string }
   | { kind: "measured-beam-fit"; wavelengthUm: number; measurements: BeamWidthMeasurement[] }
   | { kind: "field-fresnel"; input: FieldFresnelJobInput }
-  | { kind: "field-beamline"; input: FieldBeamlineJobInput };
+  | { kind: "field-beamline"; input: FieldBeamlineJobInput }
+  | { kind: "image-analysis"; input: ImageAnalysisInput };
 
 export type HeadlessJobResult =
   | { version: "0.1"; kind: "modeforge-project"; result: HeadlessRunResult; warnings: SimulationWarning[] }
@@ -215,7 +231,8 @@ export type HeadlessJobResult =
   | { version: "0.1"; kind: "agf-import"; result: AgfParseResult; warnings: SimulationWarning[] }
   | { version: "0.1"; kind: "measured-beam-fit"; result: BeamFitResult; warnings: SimulationWarning[] }
   | { version: "0.1"; kind: "field-fresnel"; result: FieldFresnelJobResult; warnings: SimulationWarning[] }
-  | { version: "0.1"; kind: "field-beamline"; result: FieldBeamlineJobResult; warnings: SimulationWarning[] };
+  | { version: "0.1"; kind: "field-beamline"; result: FieldBeamlineJobResult; warnings: SimulationWarning[] }
+  | { version: "0.1"; kind: "image-analysis"; result: ImageAnalysisResult; warnings: SimulationWarning[] };
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
@@ -773,6 +790,10 @@ export function runHeadlessJob(input: HeadlessJobInput): ValidationResult<Headle
     }
     if (input.kind === "field-beamline") {
       const result = runFieldBeamlineJob(input.input);
+      return { ok: true, value: { version: "0.1", kind: input.kind, result, warnings: result.warnings }, errors: [] };
+    }
+    if (input.kind === "image-analysis") {
+      const result = analyzeImage(input.input);
       return { ok: true, value: { version: "0.1", kind: input.kind, result, warnings: result.warnings }, errors: [] };
     }
     return { ok: false, errors: ["unknown headless job kind"] };

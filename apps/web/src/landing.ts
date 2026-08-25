@@ -57,7 +57,7 @@ const de: LandingStrings = {
   footToolsTitle: "Werkzeuge",
   footResourcesTitle: "Ressourcen",
   footStatusTitle: "Stand",
-  footDate: "Juli 2026",
+  footDate: "August 2026",
   footDisclaimer: "Paraxiale Näherung — kein Ersatz für volle Wellenoptik oder ein Sicherheitsgutachten.",
   footTools: [
     { k: "FAST", v: "paraxiale ABCD-Envelope" },
@@ -105,7 +105,7 @@ const en: LandingStrings = {
   footToolsTitle: "Toolkit",
   footResourcesTitle: "Resources",
   footStatusTitle: "Status",
-  footDate: "July 2026",
+  footDate: "August 2026",
   footDisclaimer: "Paraxial approximation — not a substitute for full wave optics or a safety assessment.",
   footTools: [
     { k: "FAST", v: "paraxial ABCD envelope" },
@@ -164,7 +164,7 @@ function render(): void {
         </div>
         <div style="display: flex; align-items: baseline; gap: 8px;">
           <span style="font-weight: 700; font-size: 17px;">ModeForge</span>
-          <span style="font: 500 10px 'IBM Plex Mono'; color: #8B94A3; border: 1px solid #232B37; border-radius: 4px; padding: 2px 6px; letter-spacing: 0.06em;">v1.0</span>
+          <span style="font: 500 10px 'IBM Plex Mono'; color: #8B94A3; border: 1px solid #232B37; border-radius: 4px; padding: 2px 6px; letter-spacing: 0.06em;">v2.0</span>
         </div>
       </a>
       <div style="flex: 1;"></div>
@@ -281,7 +281,7 @@ function render(): void {
         </div>
         <div style="display: flex; flex-direction: column; gap: 6px;">
           <div style="font: 600 10.5px 'IBM Plex Mono'; letter-spacing: 0.1em; color: #5C6675; margin-bottom: 3px;">${esc(T.footStatusTitle)}</div>
-          <div style="font: 400 12px 'IBM Plex Mono'; color: #97A1B2;">v 1.0 · ${esc(T.footDate)}</div>
+          <div style="font: 400 12px 'IBM Plex Mono'; color: #97A1B2;">v 1.1 · ${esc(T.footDate)}</div>
           <div style="font: 400 12px 'IBM Plex Mono'; color: #97A1B2;">MIT License</div>
           <div style="font: 400 11.5px 'Space Grotesk'; color: #5C6675; line-height: 1.5; margin-top: 4px;">◇ ${esc(T.footDisclaimer)}</div>
         </div>

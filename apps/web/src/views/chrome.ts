@@ -19,7 +19,9 @@ export function renderHeader(T: Strings): string {
   const pill =
     S.tab === "field"
       ? { text: "FIELD JOB · SCALAR DFT", c: "#6FA8F5", bg: "rgba(111,168,245,0.07)", bd: "rgba(111,168,245,0.28)" }
-      : { text: "FAST MODE · PARAXIAL", c: "#5CE1A0", bg: "rgba(92,225,160,0.06)", bd: "rgba(92,225,160,0.25)" };
+      : S.tab === "image"
+        ? { text: "IMG · RAW RENDER", c: "#6FA8F5", bg: "rgba(111,168,245,0.07)", bd: "rgba(111,168,245,0.28)" }
+        : { text: "FAST MODE · PARAXIAL", c: "#5CE1A0", bg: "rgba(92,225,160,0.06)", bd: "rgba(92,225,160,0.25)" };
   const tab = (id: string, label: string) =>
     `<button data-act="tab" data-arg="${id}" class="wb-tab${S.tab === id ? " active" : ""}">${esc(label)}</button>`;
   return `
@@ -28,7 +30,7 @@ export function renderHeader(T: Strings): string {
       <div class="wb-logo-box">${logoSvg()}</div>
       <div style="display: flex; align-items: baseline; gap: 8px;">
         <div class="wb-brand-name">ModeForge</div>
-        <div class="wb-brand-tag">v1.0 · HEADLESS CORE</div>
+        <div class="wb-brand-tag">v2.0 · HEADLESS CORE</div>
       </div>
     </a>
 
@@ -38,6 +40,7 @@ export function renderHeader(T: Strings): string {
       ${tab("import", T.tabImport)}
       ${tab("fit", T.tabFit)}
       ${tab("field", T.tabField)}
+      ${tab("image", T.tabAnalyzer)}
     </div>
 
     <div style="flex: 1;"></div>

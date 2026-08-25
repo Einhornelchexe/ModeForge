@@ -23,7 +23,7 @@ The headless API is the stable computation surface that the later Claude Design 
 - `beamline`: a `BeamlineResult` produced by `packages/optics`.
 - `warnings`: global warnings copied from `beamline.warnings`.
 
-`HeadlessJobResult` is a discriminated result union:
+`HeadlessJobResult` is a discriminated result union; every variant carries the same envelope `{ version: "0.1", kind, result, warnings }`:
 
 - `modeforge-project`
 - `two-lens-optimizer`
@@ -31,8 +31,12 @@ The headless API is the stable computation surface that the later Claude Design 
 - `agf-import`
 - `measured-beam-fit`
 - `field-fresnel`
+- `field-beamline`
+- `image-analysis`
 
-Field jobs accept `method: "fresnel" | "angular-spectrum"` and return power, moment radii, and typed warnings.
+Field jobs accept `method: "fresnel" | "angular-spectrum"` and return power, moment radii, and typed warnings. The `field-beamline` job propagates the scalar field through the current project beamline (`probesZmm` evaluation planes) instead of the standalone `field-fresnel` playground.
+
+The `image-analysis` job accepts `{ pixels, width, height, dtype, calib?, config? }` — raw decoded pixels only, no encoded file bytes cross the API boundary — and returns the browser-local beam-profile analysis result (background, ROI, stage-separated moments, fits, metrics) plus typed warnings.
 
 ## CLI Contract
 

@@ -36,3 +36,12 @@
    - refractive media indices must be positive.
    - surface-stack thickness values must be finite and non-negative.
    - direct pulse helpers reject zero/negative energy, duration, repetition rate, and beam radii.
+
+## Image Analyzer Cases (S18)
+
+The browser-local image analyzer's independently derived reference cases live outside this narrative list, following the `agents/verification/` audit-trail pattern used for the physics packages above:
+
+- Cases: `agents/verification/image_analyzer_cases.json`.
+- Verification doc (claim table + pin-correction trail): `agents/verification/image_analyzer_verification.md`.
+- Runner: `tests/unit/image-verification-cases.test.ts`, part of the regular `npm test` run.
+- The headless job path is additionally pinned via `examples/image_analysis_gauss.headless.json` (`npm run verify:headless`).

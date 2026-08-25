@@ -1,0 +1,122 @@
+{
+  "domain": "image-analyzer",
+  "cases": [
+    {
+      "id": "gauss_d4_alpha4_axis_aligned",
+      "description": "Noise-free Gaussian (sigma 6x4, theta 0) released by stage B: alpha=4 D4 sigma matches analytic 4*sigma*0.9986568.",
+      "target": "analyzeImage / stage-B moments (ellipse alpha=4)",
+      "inputs": { "width": 96, "height": 96, "dtype": "float32", "gaussian": { "amplitudeCounts": 100, "centerXPx": 48, "centerYPx": 48, "sigmaMajorPx": 6, "sigmaMinorPx": 4, "thetaRad": 0, "backgroundCounts": 0 }, "sigmaB": 0, "seed": 20260818 },
+      "expected": { "moments.stageB.valid": true, "moments.stageB.d4SigmaMajorPx": 23.9678, "moments.stageB.d4SigmaMinorPx": 15.9785 },
+      "toleranceRel": 0.01,
+      "derivation": "d4 = 4*sigma*T(alpha=4) with T=0.9986568: 4*6*0.9986568=23.9678, 4*4*0.9986568=15.9785; alpha=4 vs alpha=6 delta is below the 3 percent floor so stage B is released."
+    },
+    {
+      "id": "gauss_d4_alpha4_rotated",
+      "description": "Same Gaussian rotated by theta=0.6: alpha=4 D4 sigma stays rotation-invariant.",
+      "target": "analyzeImage / stage-B moments (rotated)",
+      "inputs": { "width": 96, "height": 96, "dtype": "float32", "gaussian": { "amplitudeCounts": 100, "centerXPx": 48, "centerYPx": 48, "sigmaMajorPx": 6, "sigmaMinorPx": 4, "thetaRad": 0.6, "backgroundCounts": 0 }, "sigmaB": 0, "seed": 20260818 },
+      "expected": { "moments.stageB.valid": true, "moments.stageB.d4SigmaMajorPx": 23.9678, "moments.stageB.d4SigmaMinorPx": 15.9785 },
+      "toleranceRel": 0.03,
+      "derivation": "The truncation factor depends on alpha, not orientation; rotated pixel sampling is slightly noisier, hence the wider tolerance."
+    },
+    {
+      "id": "gauss_fit_recovery_noise_free",
+      "description": "The 2D Gaussian fit recovers amplitude, sigmas and center of a clean noise-free Gaussian.",
+      "target": "analyzeImage / gauss2d fit parameters",
+      "inputs": { "width": 96, "height": 96, "dtype": "float32", "gaussian": { "amplitudeCounts": 100, "centerXPx": 48, "centerYPx": 48, "sigmaMajorPx": 6, "sigmaMinorPx": 4, "thetaRad": 0, "backgroundCounts": 0 }, "sigmaB": 0, "seed": 20260818 },
+      "expected": { "fits.gauss2d.status": "converged", "fits.gauss2d.params.amplitudeCounts": 100, "fits.gauss2d.params.sigmaMajorPx": 6, "fits.gauss2d.params.sigmaMinorPx": 4, "fits.gauss2d.params.centerXPx": 48, "fits.gauss2d.params.centerYPx": 48 },
+      "toleranceRel": 0.01,
+      "derivation": "A noise-free Gaussian is exactly reproducible by the fitted model; LM converges to the generating parameters up to grid discretization."
+    },
+    {
+      "id": "gauss_release_snr100_seeded",
+      "description": "Seeded-noise Gaussian at SNR 100 (sigmaB=1, fixed literal seed) releases stage B inside the documented release band.",
+      "target": "analyzeImage / stage-B release with noise",
+      "inputs": { "width": 96, "height": 96, "dtype": "float32", "gaussian": { "amplitudeCounts": 100, "centerXPx": 48, "centerYPx": 48, "sigmaMajorPx": 6, "sigmaMinorPx": 4, "thetaRad": 0, "backgroundCounts": 0 }, "sigmaB": 1, "seed": 2852124397 },
+      "expected": { "moments.stageB.valid": true, "moments.suppressionReason": null, "moments.stageB.d4SigmaMajorPx": 23.9, "moments.stageB.d4SigmaMinorPx": 15.9 },
+      "toleranceRel": 0.06,
+      "derivation": "SNR 100 sits inside the 15/15 release oracle; D4 is the alpha=4 analytic value plus a small seed-noise moment bias, pinned on the generator-identical run."
+    },
+    {
+      "id": "core_halo_alpha_inconsistent_noise_free",
+      "description": "Core plus 1 percent amplitude halo at 4x width, noise-free: alpha-consistency suppresses stage B.",
+      "target": "analyzeImage / alpha-consistency suppression",
+      "inputs": { "width": 96, "height": 96, "dtype": "float32", "beams": [ { "amplitudeCounts": 100, "centerXPx": 48, "centerYPx": 48, "sigmaMajorPx": 4, "sigmaMinorPx": 4, "thetaRad": 0, "backgroundCounts": 0 }, { "amplitudeCounts": 1, "centerXPx": 48, "centerYPx": 48, "sigmaMajorPx": 16, "sigmaMinorPx": 16, "thetaRad": 0, "backgroundCounts": 0 } ], "sigmaB": 0, "seed": 20260818 },
+      "expected": { "moments.suppressionReason": "alpha_inconsistent", "aperture.gates.alphaConsistency.inconsistent": true },
+      "toleranceRel": 0,
+      "derivation": "The single-Gauss fit absorbs the halo width and the alpha=4 vs alpha=6 delta is about 14 percent against the 3 percent noise-free floor (re-measured, gate-calibration spec)."
+    },
+    {
+      "id": "two_beams_multi_peak",
+      "description": "Two separated beams (main 200 counts sigma 6, satellite 26 counts sigma 3 at 44 px): residual gate fails first, multi-peak still counts 2.",
+      "target": "analyzeImage / multi-peak count and gate precedence",
+      "inputs": { "width": 96, "height": 96, "dtype": "float32", "beams": [ { "amplitudeCounts": 200, "centerXPx": 48, "centerYPx": 48, "sigmaMajorPx": 6, "sigmaMinorPx": 6, "thetaRad": 0, "backgroundCounts": 0 }, { "amplitudeCounts": 26, "centerXPx": 48, "centerYPx": 92, "sigmaMajorPx": 3, "sigmaMinorPx": 3, "thetaRad": 0, "backgroundCounts": 0 } ], "sigmaB": 0, "seed": 20260818 },
+      "expected": { "moments.suppressionReason": "residual_high", "aperture.gates.multiPeak.significantPeakCount": 2 },
+      "toleranceRel": 0,
+      "derivation": "PIN CORRECTION (first run): the 26-count satellite alone leaves uncorrelated-fit residual RMS sqrt(26^2*pi*9/9216)=1.44 counts, above the 0.005*peak=1 ceiling, so the documented precedence reports residual_high; all gates are still evaluated and the satellite (26 > 0.1*peak, 44 px > 2*(2*sigmaMajor)) pins significantPeakCount 2."
+    },
+    {
+      "id": "aperture_clipped_beam_near_edge",
+      "description": "Gaussian (sigma 8, center x=72) on a 96-wide frame: the 6-sigma check ellipse leaves the ROI and the clipping gate suppresses.",
+      "target": "analyzeImage / aperture-clipping suppression",
+      "inputs": { "width": 96, "height": 96, "dtype": "float32", "gaussian": { "amplitudeCounts": 100, "centerXPx": 72, "centerYPx": 48, "sigmaMajorPx": 8, "sigmaMinorPx": 8, "thetaRad": 0, "backgroundCounts": 0 }, "sigmaB": 0, "seed": 20260818 },
+      "expected": { "moments.suppressionReason": "aperture_clipped", "aperture.gates.clipping.checkEllipseInside": false },
+      "toleranceRel": 0,
+      "derivation": "Check-ellipse half-extent is 6*sigma=48; centre 72+48=120 exceeds the right ROI boundary 95, so the clipping gate suppresses before alpha and multi-peak."
+    },
+    {
+      "id": "sigmaB_zero_exact_thresholds",
+      "description": "Compact Gaussian whose tails under the mask floor are exactly 0 at the ROI rim: sigmaB is exactly 0, so the alpha MC is skipped with 3 percent floors.",
+      "target": "analyzeImage / sigmaB=0 gate defaults",
+      "inputs": { "width": 96, "height": 96, "dtype": "float32", "gaussian": { "amplitudeCounts": 100, "centerXPx": 48, "centerYPx": 48, "sigmaMajorPx": 4, "sigmaMinorPx": 4, "thetaRad": 0, "backgroundCounts": 0 }, "sigmaB": 0, "seed": 20260818, "maskBelowCounts": 1 },
+      "expected": { "aperture.gates.alphaConsistency.thresholdMajorPercent": 3, "aperture.gates.alphaConsistency.thresholdMinorPercent": 3, "aperture.gates.alphaConsistency.mcRealizationCount": 0, "aperture.gates.alphaConsistency.decimationFactor": 1, "aperture.gates.multiPeak.evtThresholdCounts": 0 },
+      "toleranceRel": 0,
+      "derivation": "maskBelowCounts=1 forces every rim pixel to exactly 0, so rim MAD/IQR and the dtype floor are 0 and sigmaB is exactly 0; the documented skip-MC contract gives thresholds 3, count 0, decimation 1 and EVT arm 0."
+    },
+    {
+      "id": "multi_peak_evt_threshold_pin",
+      "description": "Seeded Gaussian at sigmaB=3 on a 96x96 ROI: the multi-peak EVT arm and scanned pixel count are pinned.",
+      "target": "analyzeImage / multi-peak EVT threshold fields",
+      "inputs": { "width": 96, "height": 96, "dtype": "float32", "gaussian": { "amplitudeCounts": 100, "centerXPx": 48, "centerYPx": 48, "sigmaMajorPx": 8, "sigmaMinorPx": 6, "thetaRad": 0, "backgroundCounts": 0 }, "sigmaB": 3, "seed": 20260818 },
+      "expected": { "aperture.gates.multiPeak.evtThresholdCounts": 14.0035, "aperture.gates.multiPeak.scannedPixelCount": 9216 },
+      "toleranceRel": 0.01,
+      "derivation": "PIN CORRECTION (first run): evt = sigmaB_est*(sqrt(2 ln 9216)+0.5) with the rim-MAD estimate 2.9340 counts for this seeded geometry (not exactly 3), so the measured pin is 14.0035; the formula itself is exact in the estimated scale."
+    },
+    {
+      "id": "ellipticity_noise_free",
+      "description": "Released noise-free Gaussian (sigma 6x4, theta 0.3): ellipticity is the axis ratio sigmaMinor/sigmaMajor.",
+      "target": "analyzeImage / ellipticity metric",
+      "inputs": { "width": 96, "height": 96, "dtype": "float32", "gaussian": { "amplitudeCounts": 100, "centerXPx": 48, "centerYPx": 48, "sigmaMajorPx": 6, "sigmaMinorPx": 4, "thetaRad": 0.3, "backgroundCounts": 0 }, "sigmaB": 0, "seed": 20260818 },
+      "expected": { "moments.stageB.valid": true, "metrics.ellipticity": 0.6667 },
+      "toleranceRel": 0.02,
+      "derivation": "Analyzer ellipticity is sigmaMinor/sigmaMajor = 4/6 = 0.6667; the alpha=4 truncation cancels in the ratio."
+    },
+    {
+      "id": "wing_probe_reach_reduced_by_the_frame",
+      "description": "A wide beam whose 6-sigma release ellipse fits the frame while the 9 and 12 sigma wing probes do not: the absorbed-power detector reports the reach it actually had.",
+      "target": "analyzeImage / absorbed-power probe reach",
+      "inputs": { "width": 300, "height": 300, "dtype": "float32", "gaussian": { "amplitudeCounts": 1000, "centerXPx": 150, "centerYPx": 150, "sigmaMajorPx": 20, "sigmaMinorPx": 12, "thetaRad": 0.3, "backgroundCounts": 0 }, "sigmaB": 0, "seed": 20260823 },
+      "expected": { "moments.suppressionReason": null, "aperture.absorbedPower.maxAvailableProbeAlpha": 6, "aperture.absorbedPower.probeAlpha": 6, "aperture.absorbedPower.high": false },
+      "toleranceRel": 0,
+      "derivation": "The probe ellipse of alpha sigmas is used only when its bounding box lies inside the ROI. For sigma 20x12 at 0.3 rad the half-extent in x is alpha*sqrt((20*cos0.3)^2+(12*sin0.3)^2) = alpha*19.44 px, so alpha=6 needs 116.6 px of the 149.5 px available and alpha=9 needs 175.0 px and is dropped. maxAvailableProbeAlpha therefore reads 6, not the nominal 12, and the frame releases with the reduced reach stated rather than implied."
+    },
+    {
+      "id": "tier_check_unavailable_pedestal_widens_stage_a",
+      "description": "A beam on a uniform pedestal the fit absorbs: stage A measures a ROI-sized sigma, the cross-tier check cannot run, and the result says so instead of staying silent.",
+      "target": "analyzeImage / cross-tier check availability",
+      "inputs": { "width": 100, "height": 100, "dtype": "float32", "gaussian": { "amplitudeCounts": 1000, "centerXPx": 50, "centerYPx": 50, "sigmaMajorPx": 6, "sigmaMinorPx": 6, "thetaRad": 0, "backgroundCounts": 100 }, "sigmaB": 0, "seed": 20260823 },
+      "expected": { "moments.suppressionReason": null, "momentsRoiDiagnostic.moments.valid": true, "tierCheck.evaluated": false, "tierCheck.unavailableReason.kind": "sigma_exceeds_roi", "tierCheck.gapMajorPercent": null },
+      "toleranceRel": 0,
+      "derivation": "Stage A moments the whole ROI, so a uniform pedestal contributes its own variance W^2/12: with beam power 2*pi*1000*36 = 226195 and pedestal power 100*10000 = 1e6, the mixture variance is (226195*36 + 1e6*833.25)/1226195 = 686 px^2, sigma_A = 26.20 px and 4*sigma_A = 104.8 px, past the 100 px shorter ROI side. The fit absorbs the pedestal into its constant term, so stage B is unaffected and releases; the check that would have compared the two tiers simply has no usable tier A, which is what the block reports."
+    },
+    {
+      "id": "encircled_power_radius_gaussian",
+      "description": "Released noise-free Gaussian (sigma 6x4): encircled-power radii for fractions 0.5 and 0.8 of the ANISOTROPIC beam.",
+      "target": "analyzeImage / encircled-power radii",
+      "inputs": { "width": 96, "height": 96, "dtype": "float32", "gaussian": { "amplitudeCounts": 100, "centerXPx": 48, "centerYPx": 48, "sigmaMajorPx": 6, "sigmaMinorPx": 4, "thetaRad": 0, "backgroundCounts": 0 }, "sigmaB": 0, "seed": 20260818 },
+      "expected": { "moments.stageB.valid": true, "metrics.encircledPowerRadiiPx.0.radiusPx": 5.8309, "metrics.encircledPowerRadiiPx.1.radiusPx": 9.2 },
+      "toleranceRel": 0.05,
+      "derivation": "PIN CORRECTION (first run): the circular law 1-exp(-r^2/(2*6^2)) does NOT apply to the anisotropic 6x4 beam; integrating F(r)=(1/(48*pi))*int_0^2pi (1-exp(-r^2*(9-5cos^2(phi))/288))/(2e(phi)) dphi gives F(5.8309)=0.50 (refined from the measured run) and F(9.2)=0.80."
+    }
+  ]
+}

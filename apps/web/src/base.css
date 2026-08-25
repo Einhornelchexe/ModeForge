@@ -414,4 +414,6 @@ button {
 .result-tile > .tile-value {
   font: 600 15px "IBM Plex Mono", ui-monospace, monospace;
   color: #e7ecf4;
+  line-height: 1.35;
+  overflow-wrap: anywhere;
 }

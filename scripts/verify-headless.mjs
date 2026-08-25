@@ -87,6 +87,23 @@ function summarizeJob(file, result) {
       warningCount: value.warnings.length,
     };
   }
+  if (value.kind === "image-analysis") {
+    const analysis = value.result;
+    const moments = analysis.moments;
+    const fit = analysis.fits.gauss2d;
+    return {
+      file,
+      kind: value.kind,
+      released: moments.stageB !== null && moments.stageB.valid,
+      suppressionReason: moments.suppressionReason,
+      d4SigmaMajorPx: stableNumber(moments.stageB?.d4SigmaMajorPx ?? Number.NaN),
+      d4SigmaMinorPx: stableNumber(moments.stageB?.d4SigmaMinorPx ?? Number.NaN),
+      fitSigmaMajorPx: Number(fit.params?.sigmaMajorPx?.toPrecision(6) ?? NaN),
+      fitSigmaMinorPx: Number(fit.params?.sigmaMinorPx?.toPrecision(6) ?? NaN),
+      fitThetaRad: Number(fit.params?.thetaRad?.toPrecision(6) ?? NaN),
+      warningCount: value.warnings.length,
+    };
+  }
   return { file, kind: value.kind };
 }
 

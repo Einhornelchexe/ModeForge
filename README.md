@@ -15,6 +15,7 @@ The everyday laser-lab questions that usually end up in throwaway spreadsheets o
 3. **Which two lenses from the drawer build this relay?** — grid-search optimizer with aperture/separation constraints and sensitivity analysis.
 4. **What is my M² from this caustic scan?** — ISO-style least-squares fit of w²(z), adoptable as beam source.
 5. **When does diffraction start to matter?** — scalar field propagation (FFT Fresnel / angular spectrum) through the *actual* beamline, read out at any z plane, cross-checked against the paraxial envelope.
+6. **What's my actual beam profile from a camera image?** — a browser-local Analyzer tab for single-shot TIFF/PNG beam images: background correction (including dark-frame and a robust tilted-plane fit), ROI selection with a suggested-ROI helper, and a D4sigma (ellipse) readout next to the Gaussian/Super-Gaussian fit width, with honest suppression whenever a profile doesn't match the model.
 
 Plus: ZMX/AGF import (any sequential prescription — cemented doublets included — with honest material resolution: unknown glasses block, nothing is silently substituted), and a real-surface phase mode that makes sag-driven spherical aberration of the true prescription visible.
 
@@ -62,6 +63,9 @@ The development trail — phase documents, verification reports and reference ca
 
 ## License
 
-[MIT](LICENSE) © 2026 Patrick Feix (Rho-Labs)
+Dual-licensed by part — see [LICENSING.md](LICENSING.md) for the exact map:
+
+- Everything except the image analyzer: [MIT](LICENSE) © 2026 Patrick Feix (Rho-Labs).
+- `packages/image` (the beam-profile analyzer): [AGPL-3.0-or-later](packages/image/LICENSE) — use it freely under AGPL terms, including the network-use clause; [commercial licenses](packages/image/COMMERCIAL-LICENSE.md) are available for closed integration.
 
 ModeForge is a computation and learning tool for paraxial beam optics. Results are approximations and not a substitute for full wave-optics analysis or a laser-safety assessment.

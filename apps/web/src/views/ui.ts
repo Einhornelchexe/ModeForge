@@ -42,16 +42,20 @@ const SEV_STYLE: Record<string, { bg: string; border: string; dot: string; code:
   info: { bg: "rgba(111,168,245,0.06)", border: "rgba(111,168,245,0.25)", dot: "#6FA8F5", code: "#9CC1F5" },
 };
 
-export function warningCard(w: SimulationWarning, meta: string): string {
+export function warningCard(w: SimulationWarning, meta: string, localizedTitle?: string): string {
   const sv = SEV_STYLE[w.severity] ?? SEV_STYLE.info;
+  const title = localizedTitle && localizedTitle !== "" ? localizedTitle : w.code;
+  const codeTail = w.code.startsWith("IMAGE_") ? w.code : "";
   return `
     <div style="border: 1px solid ${sv.border}; background: ${sv.bg}; border-radius: 7px; padding: 8px 10px;">
       <div style="display: flex; align-items: center; gap: 7px;">
         <span style="width: 6px; height: 6px; border-radius: 50%; background: ${sv.dot}; flex: none;"></span>
-        <span style="font: 600 10px 'IBM Plex Mono'; letter-spacing: 0.06em; color: ${sv.code};">${esc(w.code)}</span>
+        <span style="font: 600 12px 'Space Grotesk', sans-serif; color: ${sv.code};">${esc(title)}</span>
         <span style="font: 400 10px 'IBM Plex Mono'; color: #5C6675;">${esc(meta)}</span>
       </div>
-      <div style="font: 400 11px 'Space Grotesk'; color: #C7CFDB; margin-top: 4px; line-height: 1.45;">${esc(w.message)}</div>
+      <div style="font: 400 11px 'Space Grotesk'; color: #8B94A3; margin-top: 4px; line-height: 1.45;">${esc(w.message)}${
+        codeTail ? ` <span style="font: 400 10px 'IBM Plex Mono', ui-monospace, monospace; color: #5C6675;">${esc(codeTail)}</span>` : ""
+      }</div>
     </div>`;
 }
 

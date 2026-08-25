@@ -4,6 +4,7 @@ import type {
   BeamWidthBasis,
   BeamWidthMeasurement,
   HeadlessJobResult,
+  ImageAnalysisResult,
   MaterialModel,
   ModeForgeProject,
   PulseInput,
@@ -13,7 +14,7 @@ import type {
 import type { Lang } from "./i18n.ts";
 import { loadLang } from "./i18n.ts";
 
-export type Tab = "beamline" | "optimizer" | "import" | "fit" | "field";
+export type Tab = "beamline" | "optimizer" | "import" | "fit" | "field" | "image";
 
 export type PulseDraft = {
   averagePowerW: number;
@@ -94,6 +95,156 @@ export type FieldState = {
   errs: string[];
 };
 
+// Image analyzer tab (S18e-C). Binary pixel data is intentionally NOT kept in
+// this state object: the decoded image lives in module scope of main.ts (like
+// the worker handles) and this slice only carries the UI metadata, the
+// controls and the released analysis result. `phase` distinguishes the decode
+// op from the analyze op while busy; `render` is the v1 raw Float32 copy the
+// canvas colormap reads (display-only, no physics in the UI). `decodedDtype`
+// is the decoder's original dtype of the main image (the render copy is
+// always float32). The only pixel-carrying exception is `darkFrame`: a
+// user-picked reference frame, stored as float32 after the dark-lane cast,
+// used by the decoder and analyzer in main.ts.
+export type BgRect = { x0: number; y0: number; width: number; height: number };
+export type ImageBgMethod = "none" | "manual-offset" | "dark-frame" | "rect-median" | "robust-plane" | "auto";
+export type ImageRoiMode = "full" | "rect" | "auto";
+export type ImageDrawTarget = "roi" | "bg-rect";
+export type ImagePreviewView = "closeup" | "full";
+
+export function bgRectEditorAvailable(method: ImageBgMethod): boolean {
+  return method === "rect-median" || method === "robust-plane";
+}
+
+// A background-rectangle target is meaningful only while its editor is
+// rendered. This keeps every method transition on the established ROI drag
+// path unless the operator explicitly has a rectangle-capable method open.
+export function normalizeImageDrawTarget(drawTarget: ImageDrawTarget, method: ImageBgMethod): ImageDrawTarget {
+  return drawTarget === "bg-rect" && bgRectEditorAvailable(method) ? "bg-rect" : "roi";
+}
+
+// Keep the full-frame override paired with the draw-target transition that
+// caused it.  In particular, this avoids leaving the preview forced to full
+// after an indirect exit such as applying an ROI suggestion or changing the
+// background method.
+export type ImageDrawModeState = Pick<ImageTabState, "bgMethod" | "drawTarget" | "previewView" | "previewViewBeforeBgDraw">;
+
+export function transitionImageDrawMode(
+  state: ImageDrawModeState,
+  bgMethod: ImageBgMethod,
+  requestedDrawTarget: ImageDrawTarget,
+): ImageDrawModeState {
+  const currentDrawTarget = normalizeImageDrawTarget(state.drawTarget, state.bgMethod);
+  const drawTarget = normalizeImageDrawTarget(requestedDrawTarget, bgMethod);
+  if (currentDrawTarget === "roi" && drawTarget === "bg-rect") {
+    return { bgMethod, drawTarget, previewView: "full", previewViewBeforeBgDraw: state.previewView };
+  }
+  if (currentDrawTarget === "bg-rect" && drawTarget === "roi") {
+    return {
+      bgMethod,
+      drawTarget,
+      previewView: state.previewViewBeforeBgDraw ?? state.previewView,
+      previewViewBeforeBgDraw: null,
+    };
+  }
+  return { bgMethod, drawTarget, previewView: state.previewView, previewViewBeforeBgDraw: state.previewViewBeforeBgDraw };
+}
+
+// A direct view selection is an explicit operator preference. It must win
+// over a remembered view when the background-draw mode later exits.
+export function selectImagePreviewView(previewView: ImagePreviewView): Pick<ImageTabState, "previewView" | "previewViewBeforeBgDraw"> {
+  return { previewView, previewViewBeforeBgDraw: null };
+}
+
+// Both suggestion buttons share this reducer, so accepting a proposal always
+// leaves background-rectangle drawing before it writes the ROI draft.
+export function applySuggestedImageRoi(
+  state: ImageDrawModeState,
+  rect: BgRect,
+): ImageDrawModeState & Pick<ImageTabState, "roiMode" | "roiX0" | "roiY0" | "roiW" | "roiH"> {
+  return {
+    ...transitionImageDrawMode(state, state.bgMethod, "roi"),
+    roiMode: "rect",
+    roiX0: String(rect.x0),
+    roiY0: String(rect.y0),
+    roiW: String(rect.width),
+    roiH: String(rect.height),
+  };
+}
+// Which of the six released line profiles the profile plot draws. Display
+// selection only — the engine always releases all six.
+export type ImageProfileKey = "cutX" | "cutY" | "projectionX" | "projectionY" | "axisMajor" | "axisMinor";
+export type ImageColorMap = "gray" | "turbo" | "viridis";
+export type DarkFrameDraft = {
+  name: string;
+  width: number;
+  height: number;
+  // The decoder's dtype is retained for an honest loaded-frame note; `dtype`
+  // remains float32 because the analysis engine receives the converted copy.
+  sourceDtype: string;
+  dtype: string;
+  pixels: Float32Array;
+};
+export type DarkError =
+  | { kind: "dimensions"; darkWidth: number; darkHeight: number; imageWidth: number; imageHeight: number }
+  | { kind: "decode"; detail: string[] }
+  | { kind: "dtype"; darkDtype: string; imageDtype: string };
+export type ImageTabState = {
+  fileName: string;
+  loaded: boolean;
+  busy: boolean;
+  phase: "decode" | "analyze" | null;
+  width: number;
+  height: number;
+  decodedDtype: string;
+  page: string;
+  pageCount: number;
+  channel: string;
+  channels: string[];
+  calX: string;
+  calY: string;
+  bgMethod: ImageBgMethod;
+  bgOffset: string;
+  bgRects: BgRect[];
+  // Canvas drag target. Background rectangles are editable only for the two
+  // rectangle-backed background methods; method transitions normalize this to
+  // ROI so the established ROI drag path remains the fallback.
+  drawTarget: ImageDrawTarget;
+  // The selected background rectangle survives method changes and is clamped
+  // to a valid rectangle whenever the list changes.
+  activeBgRectIndex: number | null;
+  darkFrame: DarkFrameDraft | null;
+  darkError: DarkError | null;
+  roiMode: ImageRoiMode;
+  roiX0: string;
+  roiY0: string;
+  roiW: string;
+  roiH: string;
+  // Display framing only — close-up (3×D4) or full sensor. Not the analysis ROI.
+  previewView: ImagePreviewView;
+  // While background rectangles are drawn, the preview is forced to full
+  // frame. This saves the operator's prior framing for the matching exit.
+  previewViewBeforeBgDraw: ImagePreviewView | null;
+  // Display-only color map for the preview blit. Default gray is the current
+  // linear 8-bit stretch; turbo/viridis are LUTs over that same stretch.
+  colorMap: ImageColorMap;
+  // Profile plot selection (display only).
+  profileKey: ImageProfileKey;
+  // Non-shrink note of the "ROI from fit" button: the rectangle key
+  // `${x0}:${y0}:${width}:${height}` the note was raised for. The note is
+  // rendered only while the draft rectangle still has that key, so ANY later
+  // change to the rectangle (button, suggestion, typing, drag) clears it
+  // without a reset call in every one of those paths.
+  roiFitNote: string | null;
+  roiClampNote: string | null;
+  result: ImageAnalysisResult | null;
+  render: { kind: "raw"; pixels: Float32Array } | null;
+  errs: string[];
+  // Monotonic token: load/re-decode bumps it so an in-flight analyze cannot
+  // write into a later image. Same idea as the field-tab job token.
+  imageJobGeneration: number;
+  settingsNote: "reset" | "adjusted" | "dark-dtype-changed" | null;
+};
+
 export type AppState = {
   lang: Lang;
   tab: Tab;
@@ -120,6 +271,7 @@ export type AppState = {
   imp: ImportState;
   fit: FitState;
   fld: FieldState;
+  img: ImageTabState;
 };
 
 export type PresetDef = {
@@ -254,6 +406,44 @@ export function initialState(): AppState {
       busy: false,
       progress: null,
       errs: [],
+    },
+    img: {
+      fileName: "",
+      loaded: false,
+      busy: false,
+      phase: null,
+      width: 0,
+      height: 0,
+      decodedDtype: "",
+      page: "1",
+      pageCount: 1,
+      channel: "gray",
+      channels: [],
+      calX: "",
+      calY: "",
+      bgMethod: "none",
+      bgOffset: "",
+      bgRects: [],
+      drawTarget: "roi",
+      activeBgRectIndex: null,
+      darkFrame: null,
+      darkError: null,
+      roiMode: "full",
+      roiX0: "",
+      roiY0: "",
+      roiW: "",
+      roiH: "",
+      previewView: "closeup",
+      previewViewBeforeBgDraw: null,
+      colorMap: "gray",
+      profileKey: "cutX",
+      roiFitNote: null,
+      roiClampNote: null,
+      result: null,
+      render: null,
+      errs: [],
+      imageJobGeneration: 0,
+      settingsNote: null,
     },
   };
 }

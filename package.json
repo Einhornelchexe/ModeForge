@@ -1,6 +1,7 @@
 {
   "name": "modeforge",
-  "version": "1.0.0",
+  "version": "2.0.0",
+  "license": "MIT",
   "private": true,
   "type": "module",
   "description": "Browser-local laser beamline physics core and static ModeForge workbench.",
@@ -17,8 +18,10 @@
     "run:headless": "node scripts/run-headless.mjs",
     "verify:headless": "node scripts/verify-headless.mjs",
     "verify:cases": "node scripts/verify-reference-cases.mjs",
+    "verify:s20repros": "node --test tests/repro-s20/*.test.ts",
     "dev:web": "vite apps/web --host 127.0.0.1 --port 5173",
-    "build:web": "vite build apps/web"
+    "build:web": "vite build apps/web",
+    "test:e2e": "playwright test"
   },
   "engines": {
     "node": ">=24"
@@ -26,6 +29,7 @@
   "devDependencies": {
     "@fontsource/ibm-plex-mono": "^5.2.7",
     "@fontsource/space-grotesk": "^5.2.10",
+    "@playwright/test": "^1.62.1",
     "@types/node": "^26.1.0",
     "typescript": "^6.0.3",
     "vite": "^8.1.3"

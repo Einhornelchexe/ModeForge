@@ -8,6 +8,7 @@ export type Strings = {
   tabImport: string;
   tabFit: string;
   tabField: string;
+  tabAnalyzer: string;
   importJson: string;
   exportJson: string;
   preset: string;
@@ -227,6 +228,330 @@ export type Strings = {
   loadFile: string;
   fieldSourceMode: string;
   modeFundamental: string;
+  // Image analyzer tab (S18e-C) — product-neutral plain language only.
+  imgUpload: string;
+  imgDropHint: string;
+  imgPickFile: string;
+  imgPage: string;
+  imgChannel: string;
+  imgCalibration: string;
+  imgCalX: string;
+  imgCalY: string;
+  imgBackground: string;
+  imgBgNone: string;
+  imgAuto: string;
+  imgAutoMode: string;
+  imgBgManualOffset: string;
+  imgBgOffsetCounts: string;
+  imgRoi: string;
+  imgRoiFull: string;
+  imgRoiRect: string;
+  imgRoiAuto: string;
+  imgRoiNote: string;
+  imgRoiOutOfRange: string;
+  imgRoiClamped: string;
+  imgRoiFromFit: string;
+  imgRun: string;
+  imgBusy: string;
+  imgDecoding: string;
+  imgSuppressed: string;
+  imgPhysical: string;
+  imgPhysicalD4: string;
+  imgKeyResults: string;
+  imgRawRender: string;
+  imgNoData: string;
+  imgExportJson: string;
+  imgExportCsv: string;
+  imgExportPng: string;
+  imgDiagnostics: string;
+  imgRawStats: string;
+  imgWarnings: string;
+  imgBackgroundNoise: string;
+  imgSigmaB: string;
+  imgScaleSource: string;
+  imgMedian: string;
+  imgMean: string;
+  imgStd: string;
+  imgMad: string;
+  imgIqr: string;
+  imgFloorApplied: string;
+  imgRoiStability: string;
+  imgValidVariants: string;
+  imgUndeterminable: string;
+  imgHalfSpread: string;
+  imgMomentsProfiles: string;
+  imgStageB: string;
+  imgD4Sigma: string;
+  imgCentroid: string;
+  imgTheta: string;
+  imgEllipticity: string;
+  imgEllipticityPhysical: string;
+  imgFitWidth: string;
+  imgStageA: string;
+  imgProfilesCut: string;
+  imgFitsResiduals: string;
+  imgFitStatus: string;
+  imgResidualRms: string;
+  imgResidualMax: string;
+  imgWidthFwhm: string;
+  imgWidth1e2: string;
+  imgYes: string;
+  imgNo: string;
+  imgPass: string;
+  imgFail: string;
+  imgPeakToBackground: string;
+  imgSize: string;
+  imgDtype: string;
+  imgMin: string;
+  imgMax: string;
+  imgDynamicRange: string;
+  imgSaturated: string;
+  imgClippingSuspect: string;
+  imgHotPixels: string;
+  imgZeros: string;
+  imgNegatives: string;
+  imgNonFinite: string;
+  imgEdgeTouch: string;
+  imgLocalMaxima: string;
+  imgHistogram: string;
+  imgFitParams: string;
+  imgAmplitude: string;
+  imgFitBackground: string;
+  imgSigmaMajor: string;
+  imgSigmaMinor: string;
+  imgSuperGaussN: string;
+  imgIterations: string;
+  imgCutX: string;
+  imgCutY: string;
+  imgProjX: string;
+  imgProjY: string;
+  imgAxisMajor: string;
+  imgAxisMinor: string;
+  imgMajor: string;
+  imgMinor: string;
+  imgLongAxis: string;
+  imgShortAxis: string;
+  imgResidualMap: string;
+  imgAperture: string;
+  imgGateFit: string;
+  imgGateAmplitude: string;
+  imgGateResidual: string;
+  imgGateClip: string;
+  imgGateAlpha: string;
+  imgGateMultiPeak: string;
+  imgPedestal: string;
+  imgAbsorbedPower: string;
+  imgAlphaUsed: string;
+  imgWidthScatter: string;
+  imgPartialSweep: string;
+  imgFullFrame: string;
+  imgClamped: string;
+  imgRoiSource: string;
+  imgRoiSourceInput: string;
+  imgRoiSourceFull: string;
+  imgRoiSourceAuto: string;
+  imgDisplayNote: string;
+  imgSpotCloseup: string;
+  imgViewFull: string;
+  imgViewForcedBgDraw: string;
+  imgColorMap: string;
+  imgColorMapGray: string;
+  imgColorMapTurbo: string;
+  imgColorMapViridis: string;
+  imgCountsUnit: string;
+  imgLegendFit: string;
+  imgLegendRoi: string;
+  imgRoiFullFrameNote: string;
+  imgLegendSuggestion: string;
+  imgRoiOutsideCrop: string;
+  imgEllipsePowerNote: string;
+  imgCloseupRoiNote: string;
+  imgCloseupFallbackNote: string;
+  imgCloseupFixedNote: string;
+  imgAnisoPxNote: string;
+  imgSigmaBUnmeasurable: string;
+  imgPhysicalFromFit: string;
+  imgUngatedHint: string;
+  imgUngatedHintTitle: string;
+  imgResidualRoiLabel: (width: number, height: number) => string;
+  imgResidualWindowLabel: (width: number, height: number) => string;
+  imgWarningTitle: (code: string) => string;
+  imgValid: string;
+  imgPeak: string;
+  imgEncircled: string;
+  imgModelCompare: string;
+  imgSampleCount: string;
+  imgScaleMad: string;
+  imgScaleIqr: string;
+  imgScaleFloor: string;
+  imgScaleZero: string;
+  imgReasonFitNotConverged: string;
+  imgReasonNonpositiveAmplitude: string;
+  imgReasonResidualHigh: string;
+  imgReasonApertureClipped: string;
+  // S20 stage A (additive).
+  imgReasonCoverageInsufficient: string;
+  imgReasonAlphaInconsistent: string;
+  imgReasonMultiPeak: string;
+  imgStatusConverged: string;
+  imgStatusMaxIterations: string;
+  imgStatusTimeBudget: string;
+  imgStatusSingular: string;
+  imgStatusInvalidStart: string;
+  imgWidthLowSignal: string;
+  imgWidthNonpositivePeak: string;
+  imgWidthGap: string;
+  imgMomentNonfinite: string;
+  imgMomentNonpositiveSum: string;
+  imgMomentBackgroundDominated: string;
+  imgMomentIndefinite: string;
+  imgMomentZeroCovariance: string;
+  imgAmbiguous: string;
+  imgGauss2d: string;
+  imgSuperGauss2d: string;
+  // Image analyzer tab (S18e-C) — extended background controls, part A.
+  imgBgDarkFrame: string;
+  imgBgRectMedian: string;
+  imgBgRobustPlane: string;
+  imgRectAdd: string;
+  imgRectRemove: string;
+  imgRectCorners: string;
+  imgRectEditor: string;
+  imgRectHint: string;
+  imgRectX0: string;
+  imgRectY0: string;
+  imgRectW: string;
+  imgRectH: string;
+  imgBgPickDark: string;
+  imgBgDarkLoaded: (name: string, width: number, height: number, sourceDtype: string) => string;
+  imgSuggestedRoi: string;
+  imgApplySuggestion: string;
+  imgSuggestionClamped: string;
+  imgSuggestionNoiseDominated: string;
+  imgSettingsReset: string;
+  imgSettingsAdjusted: string;
+  imgSettingsDarkDtypeChanged: string;
+  imgBgAutoRobustPlane: string;
+  imgBgAutoNone: string;
+  imgAutoRoi: (x0: number, y0: number, width: number, height: number) => string;
+  imgAutoRoiNoSuggestion: string;
+  imgSymmetry: string;
+  imgRotationAsymmetry: string;
+  imgAxialAsymmetryX: string;
+  imgAxialAsymmetryY: string;
+  imgAlphaThreshold: string;
+  imgMcRealizationCount: string;
+  imgMultiPeakThreshold: string;
+  // Image analyzer tab — profile plot with the fit model overlaid.
+  imgProfilePlot: string;
+  imgProfileMeasured: string;
+  imgProfileGaussModel: string;
+  imgProfileSuperModel: string;
+  imgProfileFwhmMark: string;
+  imgProfileE2Mark: string;
+  imgProfilePositionPx: string;
+  imgProfilePositionUm: string;
+  imgProfileIntensity: string;
+  imgProfileExportPng: string;
+  imgProfileMissing: string;
+  imgProfileNoModel: string;
+  imgProfileProjectionNote: string;
+  imgProfileAxisNote: string;
+  // Image analyzer tab — honest suggestion-iteration callout.
+  imgSuggestionCalloutTighter: string;
+  imgSuggestionCalloutWider: string;
+  imgSuggestionCalloutShifted: string;
+  imgSuggestionCalloutNumbers: (
+    width: number,
+    height: number,
+    x0: number,
+    y0: number,
+    analyzedWidth: number,
+    analyzedHeight: number,
+    areaPercent: string,
+  ) => string;
+  imgSuggestionCalloutWhy: string;
+  imgApplySuggestionRun: string;
+  // Image analyzer tab — ROI-from-fit non-shrink clamp.
+  imgRoiFitNotNarrowed: string;
+  // S20 stage G — canvas draw target and background-rectangle legend.
+  imgDrawTargetRoi: string;
+  imgDrawTargetBgRect: string;
+  imgLegendBgRect: string;
+  // S20 stage C (additive) — dark-frame error kinds.
+  imgBgDarkDimMismatch: (darkWidth: number, darkHeight: number, imageWidth: number, imageHeight: number) => string;
+  imgBgDarkDecodeFailed: string;
+  imgBgDarkDtypeMismatch: (darkDtype: string, imageDtype: string) => string;
+};
+
+const IMAGE_WARNING_TITLE_EN: Record<string, string> = {
+  IMAGE_APERTURE_SUPPRESSED: "Stage-B aperture suppressed",
+  IMAGE_AXIS_NOT_RESOLVED: "Axis not resolved",
+  IMAGE_BACKGROUND_DEGENERATE: "Background model degenerate",
+  IMAGE_EDGE_TOUCH: "Beam touches the edge",
+  IMAGE_FIT_NOT_CONVERGED: "Fit did not converge",
+  IMAGE_FLOAT_SPECIALS: "Non-finite pixels",
+  IMAGE_FWHM_AMBIGUOUS: "FWHM ambiguous",
+  IMAGE_HOT_PIXELS: "Hot-pixel candidates",
+  IMAGE_MOMENTS_UNDEFINED: "Moments undefined",
+  IMAGE_MULTI_PEAK: "Multiple peaks",
+  IMAGE_NEGATIVE_POWER: "Negative power",
+  IMAGE_NOISE_SCALE_SUSPECT: "Noise scale suspect",
+  IMAGE_ORIENTATION_UNSTABLE: "Orientation unstable",
+  IMAGE_PEDESTAL_HINT: "Background pedestal",
+  IMAGE_RESIDUAL_HIGH: "Residual too high",
+  IMAGE_ROI_SENSITIVE: "Result depends on the ROI",
+  IMAGE_ROI_UNDETERMINABLE: "ROI sensitivity undeterminable",
+  IMAGE_SATURATION: "Saturation",
+  IMAGE_CLIPPING_SUSPECT: "Possible sensor clipping",
+  IMAGE_RADIAL_NOISE_DOMINATED: "Radial profile noise-dominated",
+  IMAGE_WIDTH_RESOLUTION_LIMIT: "Width near the resolution limit",
+  IMAGE_ABSORBED_POWER: "Absorbed-power wing",
+  IMAGE_TIER_DISAGREEMENT: "Stage A and stage B disagree",
+  IMAGE_WIDTH_SCATTER: "Released width scatter",
+  // S20 stage A (additive).
+  IMAGE_COVERAGE_LOSS: "Aperture partly without data",
+  // S20 stage B (additive).
+  IMAGE_ALPHA_GATE_WEAK: "Consistency test had no power",
+  IMAGE_TIER_CHECK_UNAVAILABLE: "Cross-tier check not evaluated",
+  IMAGE_WING_PROBE_REDUCED: "Wing probes reduced by the ROI",
+  // S20 stage E (additive).
+  IMAGE_BACKGROUND_GRADIENT_IN_REFERENCE: "Background reference is tilted",
+};
+
+const IMAGE_WARNING_TITLE_DE: Record<string, string> = {
+  IMAGE_APERTURE_SUPPRESSED: "Blenden-Stufe B unterdrückt",
+  IMAGE_AXIS_NOT_RESOLVED: "Achse nicht aufgelöst",
+  IMAGE_BACKGROUND_DEGENERATE: "Untergrundmodell entartet",
+  IMAGE_EDGE_TOUCH: "Strahl berührt den Rand",
+  IMAGE_FIT_NOT_CONVERGED: "Fit nicht konvergiert",
+  IMAGE_FLOAT_SPECIALS: "Nicht-endliche Pixel",
+  IMAGE_FWHM_AMBIGUOUS: "FWHM mehrdeutig",
+  IMAGE_HOT_PIXELS: "Hot-Pixel-Kandidaten",
+  IMAGE_MOMENTS_UNDEFINED: "Momente undefiniert",
+  IMAGE_MULTI_PEAK: "Mehrere Peaks",
+  IMAGE_NEGATIVE_POWER: "Negative Leistung",
+  IMAGE_NOISE_SCALE_SUSPECT: "Rauschskala unsicher",
+  IMAGE_ORIENTATION_UNSTABLE: "Orientierung instabil",
+  IMAGE_PEDESTAL_HINT: "Untergrundsockel",
+  IMAGE_RESIDUAL_HIGH: "Residuum zu hoch",
+  IMAGE_ROI_SENSITIVE: "Ergebnis hängt vom ROI ab",
+  IMAGE_ROI_UNDETERMINABLE: "ROI-Empfindlichkeit unbestimmbar",
+  IMAGE_SATURATION: "Sättigung",
+  IMAGE_CLIPPING_SUSPECT: "Mögliches Sensor-Clipping",
+  IMAGE_RADIAL_NOISE_DOMINATED: "Radialprofil rauschdominiert",
+  IMAGE_WIDTH_RESOLUTION_LIMIT: "Breite nahe der Auflösungsgrenze",
+  IMAGE_ABSORBED_POWER: "Absorbierte Leistungsflügel",
+  IMAGE_TIER_DISAGREEMENT: "Stufe A und Stufe B weichen ab",
+  IMAGE_WIDTH_SCATTER: "Streuung der freigegebenen Breite",
+  // S20 Stufe A (additiv).
+  IMAGE_COVERAGE_LOSS: "Blende teilweise ohne Daten",
+  // S20 Stufe B (additiv).
+  IMAGE_ALPHA_GATE_WEAK: "Konsistenztest ohne Trennschärfe",
+  IMAGE_TIER_CHECK_UNAVAILABLE: "Stufenvergleich nicht ausgewertet",
+  IMAGE_WING_PROBE_REDUCED: "Flügelsonden durch ROI verkürzt",
+  // S20 Stufe E (additiv).
+  IMAGE_BACKGROUND_GRADIENT_IN_REFERENCE: "Untergrundreferenz ist verkippt",
 };
 
 const en: Strings = {
@@ -235,6 +560,7 @@ const en: Strings = {
   tabImport: "Import",
   tabFit: "Beam fit",
   tabField: "Field",
+  tabAnalyzer: "Analyzer",
   importJson: "Import JSON",
   exportJson: "Export JSON",
   preset: "PRESET",
@@ -464,6 +790,255 @@ const en: Strings = {
   loadFile: "LOAD FILE",
   fieldSourceMode: "FIELD SOURCE",
   modeFundamental: "Gauss",
+  imgUpload: "UPLOAD — IMAGE FILE",
+  imgDropHint: "Drop a .tif / .tiff / .png here (max 128 MB)",
+  imgPickFile: "Pick file",
+  imgPage: "PAGE",
+  imgChannel: "CHANNEL",
+  imgCalibration: "CALIBRATION",
+  imgCalX: "um / px X",
+  imgCalY: "um / px Y",
+  imgBackground: "BACKGROUND",
+  imgBgNone: "None",
+  imgAuto: "Auto",
+  imgAutoMode: "Auto mode",
+  imgBgManualOffset: "Manual offset",
+  imgBgOffsetCounts: "OFFSET counts",
+  imgRoi: "ROI",
+  imgRoiFull: "Full frame",
+  imgRoiRect: "Rectangle",
+  imgRoiAuto: "Auto",
+  imgRoiNote: "Drag a new rectangle on the image, drag inside the blue box to move it, drag an edge or corner to resize, type pixel coordinates, or apply a suggestion. Full frame uses the whole image. Run analysis confirms the ROI.",
+  imgRoiOutOfRange: "ROI rectangle is outside the image — please correct it.",
+  imgRoiClamped: "ROI rectangle was clamped to the image.",
+  imgRoiFromFit: "ROI from fit",
+  imgRun: "Run analysis",
+  imgBusy: "Running…",
+  imgDecoding: "Decoding…",
+  imgSuppressed: "suppressed",
+  imgPhysical: "physical",
+  imgPhysicalD4: "physical D4sigma",
+  imgKeyResults: "KEY RESULTS",
+  imgRawRender: "RAW RENDER",
+  imgNoData: "Load an image and run the analysis. The result is rendered here.",
+  imgExportJson: "Export JSON",
+  imgExportCsv: "Export CSV",
+  imgExportPng: "Export PNG",
+  imgDiagnostics: "DIAGNOSTICS",
+  imgRawStats: "RAW STATISTICS",
+  imgWarnings: "WARNINGS",
+  imgBackgroundNoise: "BACKGROUND / NOISE",
+  imgSigmaB: "sigma_B counts",
+  imgScaleSource: "scale source",
+  imgMedian: "median",
+  imgMean: "mean",
+  imgStd: "std",
+  imgMad: "MAD",
+  imgIqr: "IQR",
+  imgFloorApplied: "floor applied",
+  imgRoiStability: "ROI / STABILITY",
+  imgValidVariants: "valid variants",
+  imgUndeterminable: "undeterminable",
+  imgHalfSpread: "D4sigma HALF-SPREAD",
+  imgMomentsProfiles: "MOMENTS / PROFILES",
+  imgStageB: "RELEASED (stage B)",
+  imgD4Sigma: "D4sigma (ellipse)",
+  imgCentroid: "centroid",
+  imgTheta: "theta",
+  imgEllipticity: "ellipticity",
+  imgEllipticityPhysical: "ellipticity (physical)",
+  imgFitWidth: "fit width 4sigma",
+  imgStageA: "ROI MOMENTS (stage A)",
+  imgProfilesCut: "CUT PROFILES",
+  imgFitsResiduals: "FITS / RESIDUALS",
+  imgFitStatus: "FIT STATUS",
+  imgResidualRms: "residual rms",
+  imgResidualMax: "residual max abs",
+  imgWidthFwhm: "FWHM width",
+  imgWidth1e2: "1/e² width",
+  imgYes: "yes",
+  imgNo: "no",
+  imgPass: "pass",
+  imgFail: "fail",
+  imgPeakToBackground: "peak / sigma_B",
+  imgSize: "size",
+  imgDtype: "data type",
+  imgMin: "min",
+  imgMax: "max",
+  imgDynamicRange: "dynamic range",
+  imgSaturated: "saturated",
+  imgClippingSuspect: "clipping suspect",
+  imgHotPixels: "hot-pixel candidates",
+  imgZeros: "zeros",
+  imgNegatives: "negatives",
+  imgNonFinite: "non-finite",
+  imgEdgeTouch: "edge touch",
+  imgLocalMaxima: "local maxima",
+  imgHistogram: "HISTOGRAM",
+  imgFitParams: "GAUSS 2D PARAMETERS",
+  imgAmplitude: "amplitude",
+  imgFitBackground: "fit background",
+  imgSigmaMajor: "sigma major",
+  imgSigmaMinor: "sigma minor",
+  imgSuperGaussN: "super-Gauss n",
+  imgIterations: "iterations",
+  imgCutX: "cut X",
+  imgCutY: "cut Y",
+  imgProjX: "projection X",
+  imgProjY: "projection Y",
+  imgAxisMajor: "major axis",
+  imgAxisMinor: "minor axis",
+  imgMajor: "major",
+  imgMinor: "minor",
+  imgLongAxis: "major axis",
+  imgShortAxis: "minor axis",
+  imgResidualMap: "RESIDUAL MAP",
+  imgAperture: "RELEASE GATES",
+  imgGateFit: "fit converged",
+  imgGateAmplitude: "amplitude positive",
+  imgGateResidual: "residual",
+  imgGateClip: "check ellipse inside the ROI",
+  imgGateAlpha: "alpha consistency",
+  imgGateMultiPeak: "single peak",
+  imgPedestal: "pedestal hint",
+  imgAbsorbedPower: "absorbed-power flag",
+  imgAlphaUsed: "alpha used",
+  imgWidthScatter: "width scatter",
+  imgPartialSweep: "partial sweep",
+  imgFullFrame: "full frame",
+  imgClamped: "clamped",
+  imgRoiSource: "ROI source",
+  imgRoiSourceInput: "rectangle",
+  imgRoiSourceFull: "full frame",
+  imgRoiSourceAuto: "automatic",
+  imgDisplayNote:
+    "Display-only: linear contrast of the visible pixels and a close-up of a compact spot. Not a calibrated intensity scale. A 4sigma ellipse encloses about 86 percent of a Gaussian's power; the stretch still shows the fainter tails. The dashed orange overlay is the fit ellipse, not the ROI.",
+  imgSpotCloseup: "spot close-up",
+  imgViewFull: "full frame",
+  imgViewForcedBgDraw: "Full-frame view is required while drawing background rectangles.",
+  imgColorMap: "Color map",
+  imgColorMapGray: "Grayscale",
+  imgColorMapTurbo: "Turbo",
+  imgColorMapViridis: "Viridis",
+  imgCountsUnit: "counts",
+  imgLegendFit: "fit 4sigma ellipse",
+  imgLegendRoi: "ROI rectangle",
+  imgRoiFullFrameNote: "ROI = full frame",
+  imgLegendSuggestion: "suggested ROI",
+  imgRoiOutsideCrop: "ROI is outside this close-up — switch to full frame to see it.",
+  imgEllipsePowerNote: "4sigma ellipse: about 86 percent of Gaussian power; stretch shows fainter tails.",
+  imgCloseupRoiNote:
+    "This close-up is about three times the D4sigma diameter. Switch to full frame to see the blue ROI rectangle. The orange dashed ellipse is the fit, not a clip of the beam.",
+  imgCloseupFallbackNote:
+    "This close-up is a window of about 0.6 times the shorter frame side (at least 96 px), not three D4sigma diameters. Switch to full frame to see the blue ROI rectangle. The orange dashed ellipse is the fit, not a clip of the beam.",
+  imgCloseupFixedNote:
+    "This close-up is a 96 px window around the spot, not three D4sigma diameters. Switch to full frame to see the blue ROI rectangle. The orange dashed ellipse is the fit, not a clip of the beam.",
+  imgAnisoPxNote: "anisotropic pixels not directly convertible",
+  imgSigmaBUnmeasurable: "sigma_B not measurable",
+  imgPhysicalFromFit: "from fit (stage B suppressed)",
+  imgUngatedHint: "indicative - not release-checked",
+  imgUngatedHintTitle:
+    "The automatic release check applies only to the D4sigma main result. This value is shown unchecked, for orientation only.",
+  imgResidualRoiLabel: (width, height) => `RESIDUAL MAP — ROI ${width}×${height} px`,
+  imgResidualWindowLabel: (width, height) => `RESIDUAL MAP — ${width}×${height} px`,
+  imgWarningTitle: (code) => IMAGE_WARNING_TITLE_EN[code] ?? code,
+  imgValid: "valid",
+  imgPeak: "peak",
+  imgEncircled: "encircled power radii",
+  imgModelCompare: "model RMS reduction",
+  imgSampleCount: "samples",
+  imgScaleMad: "MAD",
+  imgScaleIqr: "IQR",
+  imgScaleFloor: "floor",
+  imgScaleZero: "zero",
+  imgReasonFitNotConverged: "fit did not converge",
+  imgReasonNonpositiveAmplitude: "non-positive amplitude",
+  imgReasonResidualHigh: "residual too high",
+  imgReasonApertureClipped: "ellipse clipped by the ROI",
+  imgReasonCoverageInsufficient: "aperture partly without data",
+  imgReasonAlphaInconsistent: "alpha-consistency gate",
+  imgReasonMultiPeak: "multiple peaks",
+  imgStatusConverged: "converged",
+  imgStatusMaxIterations: "iteration limit",
+  imgStatusTimeBudget: "time budget exceeded",
+  imgStatusSingular: "singular normal equations",
+  imgStatusInvalidStart: "invalid start",
+  imgWidthLowSignal: "low signal",
+  imgWidthNonpositivePeak: "non-positive peak",
+  imgWidthGap: "gap in the profile",
+  imgMomentNonfinite: "non-finite aggregate",
+  imgMomentNonpositiveSum: "non-positive sum",
+  imgMomentBackgroundDominated: "background-dominated",
+  imgMomentIndefinite: "indefinite covariance",
+  imgMomentZeroCovariance: "zero covariance",
+  imgAmbiguous: "ambiguous",
+  imgGauss2d: "Gauss 2D",
+  imgSuperGauss2d: "super-Gauss 2D",
+  imgBgDarkFrame: "Dark frame",
+  imgBgRectMedian: "Rectangle median",
+  imgBgRobustPlane: "Robust plane",
+  imgRectAdd: "Add rectangle",
+  imgRectRemove: "Remove",
+  imgRectCorners: "Corner preset",
+  imgRectEditor: "RECTANGLES",
+  imgRectHint: "Place rectangles on empty background, not on the beam. The corner preset fills four edge patches.",
+  imgRectX0: "x0",
+  imgRectY0: "y0",
+  imgRectW: "w",
+  imgRectH: "h",
+  imgBgPickDark: "Pick dark frame",
+  imgBgDarkLoaded: (name, width, height, dtype) => `Loaded: ${name} · ${width}×${height} · ${dtype}`,
+  imgSuggestedRoi: "Suggested ROI",
+  imgApplySuggestion: "Apply suggestion",
+  imgSuggestionClamped: "Clamped to the image frame.",
+  imgSuggestionNoiseDominated:
+    "Noise-dominated: the mask covers much of the frame under a non-measured noise scale — verify before applying.",
+  imgSettingsReset: "Analysis settings were reset for the new image (display preferences kept).",
+  imgSettingsAdjusted: "Settings were adjusted to the new image size.",
+  imgSettingsDarkDtypeChanged: "The dark frame was removed because the image data type changed.",
+  imgBgAutoRobustPlane: "Auto background: robust plane over corner references.",
+  imgBgAutoNone: "Auto background: no background correction was applied.",
+  imgAutoRoi: (x0, y0, width, height) => `Auto ROI: ${x0},${y0},${width} × ${height}`,
+  imgAutoRoiNoSuggestion: "Auto ROI: no suggestion — full frame was analyzed.",
+  imgSymmetry: "SYMMETRY",
+  imgRotationAsymmetry: "rotation asymmetry",
+  imgAxialAsymmetryX: "axial asymmetry X",
+  imgAxialAsymmetryY: "axial asymmetry Y",
+  imgAlphaThreshold: "alpha threshold",
+  imgMcRealizationCount: "MC realizations",
+  imgMultiPeakThreshold: "multi-peak threshold",
+  imgProfilePlot: "PROFILE PLOT",
+  imgProfileMeasured: "measured",
+  imgProfileGaussModel: "Gauss fit model",
+  imgProfileSuperModel: "Super-Gauss fit model",
+  imgProfileFwhmMark: "FWHM crossings",
+  imgProfileE2Mark: "1/e² crossings",
+  imgProfilePositionPx: "position — px",
+  imgProfilePositionUm: "position — µm",
+  imgProfileIntensity: "intensity — counts",
+  imgProfileExportPng: "Plot PNG",
+  imgProfileMissing: "This profile was not released for the current run.",
+  imgProfileNoModel: "No fit model drawn: the fit produced no parameters for this line.",
+  imgProfileProjectionNote:
+    "A projection is a sum over the ROI, so the model line is the analytic marginal of the fitted 2D Gauss (sigma from the covariance) plus the summed background.",
+  imgProfileAxisNote: "Position is the signed distance from the profile centre along the profile direction.",
+  imgSuggestionCalloutTighter: "This run suggests a tighter ROI — apply it and analyse again.",
+  imgSuggestionCalloutWider: "This run suggests a wider ROI — apply it and analyse again.",
+  imgSuggestionCalloutShifted: "This run suggests a differently placed ROI — apply it and analyse again.",
+  imgSuggestionCalloutNumbers: (width, height, x0, y0, analyzedWidth, analyzedHeight, areaPercent) =>
+    `Proposal ${width}×${height} px at x0 ${x0}, y0 ${y0} · area ${areaPercent} versus the analysed ${analyzedWidth}×${analyzedHeight} px.`,
+  imgSuggestionCalloutWhy:
+    "The proposal is iterative — each run recomputes it from that run's corrected image and noise scale, so it can refine after an applied change.",
+  imgApplySuggestionRun: "Apply and analyse again",
+  imgRoiFitNotNarrowed: "Profile is not Gaussian — the ROI is not narrowed further.",
+  imgDrawTargetRoi: "Measurement ROI",
+  imgDrawTargetBgRect: "Background rectangle",
+  imgLegendBgRect: "background rectangle",
+  imgBgDarkDimMismatch: (darkWidth, darkHeight, imageWidth, imageHeight) =>
+    `Dark frame dimensions ${darkWidth}×${darkHeight} do not match image dimensions ${imageWidth}×${imageHeight}.`,
+  imgBgDarkDecodeFailed: "The dark frame file could not be read.",
+  imgBgDarkDtypeMismatch: (darkDtype, imageDtype) =>
+    `Dark frame data type ${darkDtype} does not match image data type ${imageDtype}.`,
 };
 
 const de: Strings = {
@@ -472,6 +1047,7 @@ const de: Strings = {
   tabImport: "Import",
   tabFit: "Strahl-Fit",
   tabField: "Feld",
+  tabAnalyzer: "Bildanalyse",
   importJson: "JSON importieren",
   exportJson: "JSON exportieren",
   preset: "VORLAGE",
@@ -702,6 +1278,255 @@ const de: Strings = {
   loadFile: "DATEI LADEN",
   fieldSourceMode: "FELD-QUELLE",
   modeFundamental: "Gauß",
+  imgUpload: "UPLOAD — BILDDATEI",
+  imgDropHint: ".tif / .tiff / .png hier ablegen (max. 128 MB)",
+  imgPickFile: "Datei wählen",
+  imgPage: "SEITE",
+  imgChannel: "KANAL",
+  imgCalibration: "KALIBRIERUNG",
+  imgCalX: "µm / px X",
+  imgCalY: "µm / px Y",
+  imgBackground: "UNTERGRUND",
+  imgBgNone: "Keiner",
+  imgAuto: "Auto",
+  imgAutoMode: "Automodus",
+  imgBgManualOffset: "Manueller Offset",
+  imgBgOffsetCounts: "OFFSET Zählwerte",
+  imgRoi: "ROI",
+  imgRoiFull: "Gesamtes Bild",
+  imgRoiRect: "Rechteck",
+  imgRoiAuto: "Auto",
+  imgRoiNote: "Neues Rechteck auf dem Bild ziehen, im blauen Kasten verschieben, am Rand oder an einer Ecke die Größe ändern, Pixelkoordinaten eintippen oder einen Vorschlag übernehmen. Gesamtes Bild verwendet alle Pixel. „Analyse starten“ bestätigt die ROI.",
+  imgRoiOutOfRange: "ROI-Rechteck liegt außerhalb des Bildes — bitte korrigieren.",
+  imgRoiClamped: "ROI-Rechteck wurde auf das Bild beschnitten.",
+  imgRoiFromFit: "ROI aus Fit ableiten",
+  imgRun: "Analyse starten",
+  imgBusy: "Läuft…",
+  imgDecoding: "Dekodiere…",
+  imgSuppressed: "unterdrückt",
+  imgPhysical: "physikalisch",
+  imgPhysicalD4: "physikalisches D4sigma",
+  imgKeyResults: "KERNWERTE",
+  imgRawRender: "ROH-DARSTELLUNG",
+  imgNoData: "Bild laden und Analyse starten. Das Ergebnis erscheint hier.",
+  imgExportJson: "JSON exportieren",
+  imgExportCsv: "CSV exportieren",
+  imgExportPng: "PNG exportieren",
+  imgDiagnostics: "DIAGNOSE",
+  imgRawStats: "ROH-STATISTIK",
+  imgWarnings: "WARNUNGEN",
+  imgBackgroundNoise: "UNTERGRUND / RAUSCHEN",
+  imgSigmaB: "sigma_B Zählwerte",
+  imgScaleSource: "Skalenquelle",
+  imgMedian: "Median",
+  imgMean: "Mittelwert",
+  imgStd: "Std",
+  imgMad: "MAD",
+  imgIqr: "IQR",
+  imgFloorApplied: "Boden angewandt",
+  imgRoiStability: "ROI / STABILITÄT",
+  imgValidVariants: "gültige Varianten",
+  imgUndeterminable: "nicht bestimmbar",
+  imgHalfSpread: "D4sigma HALBE SPANNWEITE",
+  imgMomentsProfiles: "MOMENTE / PROFILE",
+  imgStageB: "FREIGEGEBEN (Stufe B)",
+  imgD4Sigma: "D4sigma (Ellipse)",
+  imgCentroid: "Schwerpunkt",
+  imgTheta: "Theta",
+  imgEllipticity: "Elliptizität",
+  imgEllipticityPhysical: "Elliptizität (physikalisch)",
+  imgFitWidth: "Fit-Breite 4sigma",
+  imgStageA: "ROI-MOMENTE (Stufe A)",
+  imgProfilesCut: "SCHNITTPROFILE",
+  imgFitsResiduals: "FITS / RESIDUEN",
+  imgFitStatus: "FIT-STATUS",
+  imgResidualRms: "Residuum RMS",
+  imgResidualMax: "Residuum max. abs.",
+  imgWidthFwhm: "FWHM-Breite",
+  imgWidth1e2: "1/e²-Breite",
+  imgYes: "ja",
+  imgNo: "nein",
+  imgPass: "bestanden",
+  imgFail: "nicht bestanden",
+  imgPeakToBackground: "Peak / sigma_B",
+  imgSize: "Größe",
+  imgDtype: "Datentyp",
+  imgMin: "min",
+  imgMax: "max",
+  imgDynamicRange: "Dynamik",
+  imgSaturated: "gesättigt",
+  imgClippingSuspect: "Clipping-Verdacht",
+  imgHotPixels: "Hot-Pixel-Kandidaten",
+  imgZeros: "Nullen",
+  imgNegatives: "Negative",
+  imgNonFinite: "nicht endlich",
+  imgEdgeTouch: "Randberührung",
+  imgLocalMaxima: "lokale Maxima",
+  imgHistogram: "HISTOGRAMM",
+  imgFitParams: "GAUSS-2D-PARAMETER",
+  imgAmplitude: "Amplitude",
+  imgFitBackground: "Fit-Untergrund",
+  imgSigmaMajor: "Sigma (große Achse)",
+  imgSigmaMinor: "Sigma (kleine Achse)",
+  imgSuperGaussN: "Super-Gauss n",
+  imgIterations: "Iterationen",
+  imgCutX: "Schnitt X",
+  imgCutY: "Schnitt Y",
+  imgProjX: "Projektion X",
+  imgProjY: "Projektion Y",
+  imgAxisMajor: "lange Achse",
+  imgAxisMinor: "kurze Achse",
+  imgMajor: "große Achse",
+  imgMinor: "kleine Achse",
+  imgLongAxis: "lange Achse",
+  imgShortAxis: "kurze Achse",
+  imgResidualMap: "RESIDUENKARTE",
+  imgAperture: "FREIGABE-GATES",
+  imgGateFit: "Fit konvergiert",
+  imgGateAmplitude: "Amplitude positiv",
+  imgGateResidual: "Residuum",
+  imgGateClip: "Prüfellipse im ROI",
+  imgGateAlpha: "Alpha-Konsistenz",
+  imgGateMultiPeak: "einzelner Peak",
+  imgPedestal: "Sockel-Hinweis",
+  imgAbsorbedPower: "absorbierte-Leistung-Flag",
+  imgAlphaUsed: "verwendetes Alpha",
+  imgWidthScatter: "Breitenstreuung",
+  imgPartialSweep: "unvollständiger Sweep",
+  imgFullFrame: "gesamtes Bild",
+  imgClamped: "geklemmt",
+  imgRoiSource: "ROI-Quelle",
+  imgRoiSourceInput: "Rechteck",
+  imgRoiSourceFull: "gesamtes Bild",
+  imgRoiSourceAuto: "automatisch",
+  imgDisplayNote:
+    "Nur Darstellung: linearer Kontrast der sichtbaren Pixel und Ausschnitt eines kompakten Spots. Keine kalibrierte Intensitätsskala. Eine 4sigma-Ellipse umschließt etwa 86 Prozent der Leistung eines Gauß-Strahls; die Kontrastspreizung macht die schwächeren Flügel trotzdem sichtbar. Die gestrichelte orange Linie ist die Fit-Ellipse, nicht die ROI.",
+  imgSpotCloseup: "Spot-Ausschnitt",
+  imgViewFull: "gesamtes Bild",
+  imgViewForcedBgDraw: "Beim Zeichnen von Hintergrund-Rechtecken ist das gesamte Bild erforderlich.",
+  imgColorMap: "Farbdarstellung",
+  imgColorMapGray: "Graustufen",
+  imgColorMapTurbo: "Turbo",
+  imgColorMapViridis: "Viridis",
+  imgCountsUnit: "Zählwerte",
+  imgLegendFit: "Fit-4sigma-Ellipse",
+  imgLegendRoi: "ROI-Rechteck",
+  imgRoiFullFrameNote: "ROI = gesamtes Bild",
+  imgLegendSuggestion: "ROI-Vorschlag",
+  imgRoiOutsideCrop: "ROI liegt außerhalb dieses Ausschnitts — auf gesamtes Bild umschalten, um sie zu sehen.",
+  imgEllipsePowerNote: "4sigma-Ellipse: etwa 86 Prozent der Gauß-Leistung; Anzeige zeigt schwächere Flügel.",
+  imgCloseupRoiNote:
+    "Dieser Ausschnitt ist etwa das Dreifache des D4sigma-Durchmessers. Auf gesamtes Bild umschalten, um das blaue ROI-Rechteck zu sehen. Die orange gestrichelte Ellipse ist der Fit, kein Beschnitt des Strahls.",
+  imgCloseupFallbackNote:
+    "Dieser Ausschnitt ist ein Fenster von etwa 0,6 der kürzeren Bildseite (mindestens 96 px), nicht das Dreifache des D4sigma-Durchmessers. Auf gesamtes Bild umschalten, um das blaue ROI-Rechteck zu sehen. Die orange gestrichelte Ellipse ist der Fit, kein Beschnitt des Strahls.",
+  imgCloseupFixedNote:
+    "Dieser Ausschnitt ist ein 96-px-Fenster um den Spot, nicht das Dreifache des D4sigma-Durchmessers. Auf gesamtes Bild umschalten, um das blaue ROI-Rechteck zu sehen. Die orange gestrichelte Ellipse ist der Fit, kein Beschnitt des Strahls.",
+  imgAnisoPxNote: "anisotrope Pixel nicht direkt umrechenbar",
+  imgSigmaBUnmeasurable: "sigma_B nicht messbar",
+  imgPhysicalFromFit: "aus dem Fit (Stufe B unterdrückt)",
+  imgUngatedHint: "Richtwert - ohne Freigabeprüfung",
+  imgUngatedHintTitle:
+    "Die automatische Freigabeprüfung gilt nur für das D4sigma-Hauptergebnis. Dieser Wert wird ungeprüft angezeigt und dient nur zur Orientierung.",
+  imgResidualRoiLabel: (width, height) => `RESIDUENKARTE — ROI ${width}×${height} px`,
+  imgResidualWindowLabel: (width, height) => `RESIDUENKARTE — ${width}×${height} px`,
+  imgWarningTitle: (code) => IMAGE_WARNING_TITLE_DE[code] ?? code,
+  imgValid: "gültig",
+  imgPeak: "Peak",
+  imgEncircled: "eingeschlossene Leistungsradien",
+  imgModelCompare: "Modell-RMS-Reduktion",
+  imgSampleCount: "Stichproben",
+  imgScaleMad: "MAD",
+  imgScaleIqr: "IQR",
+  imgScaleFloor: "Boden",
+  imgScaleZero: "Null",
+  imgReasonFitNotConverged: "Fit nicht konvergiert",
+  imgReasonNonpositiveAmplitude: "nicht-positive Amplitude",
+  imgReasonResidualHigh: "Residuum zu hoch",
+  imgReasonApertureClipped: "Ellipse durch das ROI beschnitten",
+  imgReasonCoverageInsufficient: "Blende teilweise ohne Daten",
+  imgReasonAlphaInconsistent: "Alpha-Konsistenz-Gate",
+  imgReasonMultiPeak: "mehrere Peaks",
+  imgStatusConverged: "konvergiert",
+  imgStatusMaxIterations: "Iterationslimit",
+  imgStatusTimeBudget: "Zeitbudget überschritten",
+  imgStatusSingular: "singuläre Normalgleichungen",
+  imgStatusInvalidStart: "ungültiger Start",
+  imgWidthLowSignal: "schwaches Signal",
+  imgWidthNonpositivePeak: "nicht-positiver Peak",
+  imgWidthGap: "Lücke im Profil",
+  imgMomentNonfinite: "nicht-endliche Summe",
+  imgMomentNonpositiveSum: "nicht-positive Summe",
+  imgMomentBackgroundDominated: "untergrunddominiert",
+  imgMomentIndefinite: "indefinite Kovarianz",
+  imgMomentZeroCovariance: "Null-Kovarianz",
+  imgAmbiguous: "mehrdeutig",
+  imgGauss2d: "Gauss 2D",
+  imgSuperGauss2d: "Super-Gauss 2D",
+  imgBgDarkFrame: "Dunkelbild",
+  imgBgRectMedian: "Rechteck-Median",
+  imgBgRobustPlane: "Robuste Ebene",
+  imgRectAdd: "Rechteck hinzufügen",
+  imgRectRemove: "Entfernen",
+  imgRectCorners: "Ecken-Vorlage",
+  imgRectEditor: "RECHTECKE",
+  imgRectHint: "Rechtecke auf leeren Hintergrund legen, nicht auf den Strahl. Die Ecken-Vorlage füllt vier Randfelder.",
+  imgRectX0: "x0",
+  imgRectY0: "y0",
+  imgRectW: "w",
+  imgRectH: "h",
+  imgBgPickDark: "Dunkelbild wählen",
+  imgBgDarkLoaded: (name, width, height, dtype) => `Geladen: ${name} · ${width}×${height} · ${dtype}`,
+  imgSuggestedRoi: "ROI-Vorschlag",
+  imgApplySuggestion: "Vorschlag übernehmen",
+  imgSuggestionClamped: "An den Bildrand angepasst.",
+  imgSuggestionNoiseDominated:
+    "Rauschdominiert: Die Maske bedeckt einen großen Teil des Bildes unter einer nicht gemessenen Rauschskala — vor Übernahme prüfen.",
+  imgSettingsReset: "Analyse-Einstellungen wurden für das neue Bild zurückgesetzt (Anzeige-Einstellungen bleiben).",
+  imgSettingsAdjusted: "Einstellungen wurden an die neue Bildgröße angepasst.",
+  imgSettingsDarkDtypeChanged: "Das Dunkelbild wurde entfernt, weil sich der Bilddatentyp geändert hat.",
+  imgBgAutoRobustPlane: "Automatischer Untergrund: robuste Ebene über Eckreferenzen.",
+  imgBgAutoNone: "Automatischer Untergrund: keine Untergrundkorrektur wurde angewendet.",
+  imgAutoRoi: (x0, y0, width, height) => `Automatische ROI: ${x0},${y0},${width} × ${height}`,
+  imgAutoRoiNoSuggestion: "Automatische ROI: kein Vorschlag — gesamtes Bild wurde analysiert.",
+  imgSymmetry: "SYMMETRIE",
+  imgRotationAsymmetry: "Rotationsasymmetrie",
+  imgAxialAsymmetryX: "axiale Asymmetrie X",
+  imgAxialAsymmetryY: "axiale Asymmetrie Y",
+  imgAlphaThreshold: "Alpha-Schwelle",
+  imgMcRealizationCount: "MC-Realisierungen",
+  imgMultiPeakThreshold: "Mehrfachpeak-Schwelle",
+  imgProfilePlot: "PROFILSCHNITT",
+  imgProfileMeasured: "gemessen",
+  imgProfileGaussModel: "Gauss-Fit-Modell",
+  imgProfileSuperModel: "Super-Gauss-Fit-Modell",
+  imgProfileFwhmMark: "FWHM-Durchgänge",
+  imgProfileE2Mark: "1/e²-Durchgänge",
+  imgProfilePositionPx: "Position — px",
+  imgProfilePositionUm: "Position — µm",
+  imgProfileIntensity: "Intensität — Counts",
+  imgProfileExportPng: "Plot-PNG",
+  imgProfileMissing: "Dieses Profil wurde für den aktuellen Lauf nicht freigegeben.",
+  imgProfileNoModel: "Keine Modellkurve gezeichnet: Der Fit hat für diese Linie keine Parameter geliefert.",
+  imgProfileProjectionNote:
+    "Eine Projektion ist eine Summe über die ROI, deshalb ist die Modellkurve die analytische Randverteilung des angepassten 2D-Gauss (Sigma aus der Kovarianz) plus dem aufsummierten Untergrund.",
+  imgProfileAxisNote: "Die Position ist der vorzeichenbehaftete Abstand vom Profilzentrum entlang der Profilrichtung.",
+  imgSuggestionCalloutTighter: "Dieser Lauf schlägt ein engeres ROI vor — übernehmen und neu analysieren.",
+  imgSuggestionCalloutWider: "Dieser Lauf schlägt ein weiteres ROI vor — übernehmen und neu analysieren.",
+  imgSuggestionCalloutShifted: "Dieser Lauf schlägt ein anders platziertes ROI vor — übernehmen und neu analysieren.",
+  imgSuggestionCalloutNumbers: (width, height, x0, y0, analyzedWidth, analyzedHeight, areaPercent) =>
+    `Vorschlag ${width}×${height} px bei x0 ${x0}, y0 ${y0} · Fläche ${areaPercent} gegenüber dem analysierten ${analyzedWidth}×${analyzedHeight} px.`,
+  imgSuggestionCalloutWhy:
+    "Der Vorschlag ist iterativ — jeder Lauf berechnet ihn aus dem korrigierten Bild und der Rauschskala dieses Laufs neu; nach einer übernommenen Änderung kann er sich weiter verfeinern.",
+  imgApplySuggestionRun: "Übernehmen und neu analysieren",
+  imgRoiFitNotNarrowed: "Profil ist nicht gaußförmig — das ROI wird nicht weiter verengt.",
+  imgDrawTargetRoi: "Mess-ROI",
+  imgDrawTargetBgRect: "Hintergrund-Rechteck",
+  imgLegendBgRect: "Hintergrund-Rechteck",
+  imgBgDarkDimMismatch: (darkWidth, darkHeight, imageWidth, imageHeight) =>
+    `Die Maße des Dunkelbildes ${darkWidth}×${darkHeight} passen nicht zu den Bildmaßen ${imageWidth}×${imageHeight}.`,
+  imgBgDarkDecodeFailed: "Die Dunkelbild-Datei konnte nicht gelesen werden.",
+  imgBgDarkDtypeMismatch: (darkDtype, imageDtype) =>
+    `Der Datentyp des Dunkelbildes ${darkDtype} passt nicht zum Bilddatentyp ${imageDtype}.`,
 };
 
 export function strings(lang: Lang): Strings {
