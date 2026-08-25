@@ -1,5 +1,7 @@
 // Workbench UI strings, transcribed verbatim from the Claude Design source.
 
+import type { SimulationWarningCode } from "../../../packages/api/src/index.ts";
+
 export type Lang = "en" | "de";
 
 export type Strings = {
@@ -408,10 +410,11 @@ export type Strings = {
   imgSigmaBUnmeasurable: string;
   imgPhysicalFromFit: string;
   imgUngatedHint: string;
-  imgUngatedHintTitle: string;
+  imgUngatedInfo: string;
   imgResidualRoiLabel: (width: number, height: number) => string;
   imgResidualWindowLabel: (width: number, height: number) => string;
   imgWarningTitle: (code: string) => string;
+  warningDescription: (code: string, fallback: string) => string;
   imgValid: string;
   imgPeak: string;
   imgEncircled: string;
@@ -522,6 +525,96 @@ export type Strings = {
   imgBgDarkDtypeMismatch: (darkDtype: string, imageDtype: string) => string;
 };
 
+const WARNING_DESCRIPTION_EN: Record<SimulationWarningCode, string> = {
+  PARAXIAL_ANGLE_HIGH: "The propagation angle is high enough that the paraxial approximation may be inaccurate.",
+  APERTURE_MARGIN_LOW: "The beam is close to the aperture limit.",
+  MATERIAL_CONSTANT_N: "This material uses a fixed refractive index, so dispersion is unavailable.",
+  MATERIAL_OUTSIDE_RANGE: "The selected wavelength lies outside the material's available range.",
+  MATERIAL_UNKNOWN: "A required material is unknown or the catalog supplied none; details are in the message.",
+  DISPERSION_UNAVAILABLE: "Dispersion data is unavailable for this material.",
+  FIELD_PROPAGATION_UNAVAILABLE: "This field propagation cannot be computed for the current configuration.",
+  FIELD_SAMPLING_LOW: "A sampling or grid notice for the field calculation; details are in the message.",
+  MEASUREMENT_FIT_RESIDUAL_HIGH: "The beam-fit residual exceeds the reporting threshold.",
+  UNSUPPORTED_PROFILE_PROPAGATION: "The selected profile is approximated for propagation.",
+  INVALID_INPUT: "The supplied input is not usable for this calculation.",
+  IMAGE_APERTURE_SUPPRESSED: "Stage-B aperture moments are not released because a release gate did not pass; the message gives the reason.",
+  IMAGE_AXIS_NOT_RESOLVED: "The released minor axis is below the resolvable size.",
+  IMAGE_BACKGROUND_DEGENERATE: "The requested background model could not be applied; the image is analyzed without it.",
+  IMAGE_EDGE_TOUCH: "The beam reaches the image border, so power outside the image cannot be excluded.",
+  IMAGE_FIT_NOT_CONVERGED: "The 2D Gaussian fit did not converge to a usable geometry.",
+  IMAGE_FLOAT_SPECIALS: "The image contains non-finite pixel values; where they lie in the measurement aperture, they shift the released widths.",
+  IMAGE_FWHM_AMBIGUOUS: "At least one profile width is ambiguous because another lobe reaches the threshold.",
+  IMAGE_HOT_PIXELS: "The image contains an elevated number of hot-pixel candidates.",
+  IMAGE_MOMENTS_UNDEFINED: "The ROI moments could not be determined.",
+  IMAGE_MULTI_PEAK: "More than one significant peak was detected.",
+  IMAGE_NEGATIVE_POWER: "The negative power is high compared with the positive power; check the background correction.",
+  IMAGE_NOISE_SCALE_SUSPECT: "The background noise estimate may not distinguish beam from noise.",
+  IMAGE_ORIENTATION_UNSTABLE: "The beam orientation is unstable.",
+  IMAGE_PEDESTAL_HINT: "A remaining background level may bias the reported widths.",
+  IMAGE_RESIDUAL_HIGH: "The Gaussian model residual exceeds the release ceiling.",
+  IMAGE_ROI_SENSITIVE: "The released quantities react noticeably to the ROI choice.",
+  IMAGE_ROI_UNDETERMINABLE: "The ROI stability sweep could not determine the sensitivity spread.",
+  IMAGE_SATURATION: "Pixels are at or above the saturation limit.",
+  IMAGE_CLIPPING_SUSPECT: "Many pixels share the frame maximum below the sensor limit; clipping may be present.",
+  IMAGE_RADIAL_NOISE_DOMINATED: "The radial distribution is dominated by background noise.",
+  IMAGE_WIDTH_RESOLUTION_LIMIT: "The smaller released width is below the resolution limit and reads systematically high under pixel integration.",
+  IMAGE_ABSORBED_POWER: "The background model may contain a wide, faint beam wing and bias the released width.",
+  IMAGE_TIER_DISAGREEMENT: "The released aperture widths differ from the diagnostic ROI moments.",
+  IMAGE_WIDTH_SCATTER: "The released widths have substantial uncertainty from this image's noise.",
+  IMAGE_COVERAGE_LOSS: "Missing data in the measurement aperture slightly shifts the released widths.",
+  IMAGE_ALPHA_GATE_WEAK: "The aperture-consistency check cannot distinguish reliably for this image.",
+  IMAGE_TIER_CHECK_UNAVAILABLE: "The released widths were not compared with the diagnostic ROI moments.",
+  IMAGE_WING_PROBE_REDUCED: "The widest wing probes do not fit in the ROI.",
+  IMAGE_BACKGROUND_GRADIENT_IN_REFERENCE: "The background reference has a trend that a single-offset correction leaves in the image.",
+  IMAGE_BEAM_IN_BACKGROUND_REFERENCE:
+    "A background reference rectangle intersects the beam's 4-sigma ellipse; the background model may contain beam power.",
+};
+
+const WARNING_DESCRIPTION_DE: Record<SimulationWarningCode, string> = {
+  PARAXIAL_ANGLE_HIGH: "Der Ausbreitungswinkel ist so groß, dass die paraxiale Näherung ungenau werden kann.",
+  APERTURE_MARGIN_LOW: "Der Strahl liegt nahe an der Aperturgrenze.",
+  MATERIAL_CONSTANT_N: "Dieses Material verwendet einen festen Brechungsindex; Dispersion ist nicht verfügbar.",
+  MATERIAL_OUTSIDE_RANGE: "Die gewählte Wellenlänge liegt außerhalb des verfügbaren Bereichs des Materials.",
+  MATERIAL_UNKNOWN: "Ein benoetigtes Material ist nicht bekannt oder der Katalog lieferte keines; Einzelheiten in der Meldung.",
+  DISPERSION_UNAVAILABLE: "Für dieses Material sind keine Dispersionsdaten verfügbar.",
+  FIELD_PROPAGATION_UNAVAILABLE: "Die Ausbreitung des Feldes kann für diese Einstellung nicht berechnet werden.",
+  FIELD_SAMPLING_LOW: "Ein Abtast- oder Gitter-Hinweis zur Feldrechnung; Einzelheiten stehen in der Meldung.",
+  MEASUREMENT_FIT_RESIDUAL_HIGH: "Die Abweichung des Strahl-Fits überschreitet die Meldeschwelle.",
+  UNSUPPORTED_PROFILE_PROPAGATION: "Das gewählte Profil wird für die Ausbreitung angenähert.",
+  INVALID_INPUT: "Die Eingabe ist für diese Berechnung nicht verwendbar.",
+  IMAGE_APERTURE_SUPPRESSED: "Die Blenden-Momente der Stufe B werden nicht freigegeben, weil ein Freigabe-Gate fehlgeschlagen ist; der Grund steht in der Meldung.",
+  IMAGE_AXIS_NOT_RESOLVED: "Die freigegebene Nebenachse liegt unterhalb der aufloesbaren Groesse.",
+  IMAGE_BACKGROUND_DEGENERATE: "Das angeforderte Hintergrund-Modell konnte nicht angewendet werden; das Bild wird ohne diese Korrektur ausgewertet.",
+  IMAGE_EDGE_TOUCH: "Der Strahl erreicht den Bildrand; Leistung außerhalb des Bildes kann nicht ausgeschlossen werden.",
+  IMAGE_FIT_NOT_CONVERGED: "Der 2D-Gauß-Fit ist nicht zu einer verwendbaren Geometrie konvergiert.",
+  IMAGE_FLOAT_SPECIALS: "Das Bild enthaelt nicht-endliche Pixelwerte; wo sie in der Messblende liegen, verschieben sie die freigegebenen Breiten.",
+  IMAGE_FWHM_AMBIGUOUS: "Mindestens eine Profilbreite ist mehrdeutig, weil eine weitere Keule die Schwelle erreicht.",
+  IMAGE_HOT_PIXELS: "Das Bild enthält auffällig viele Hot-Pixel-Kandidaten.",
+  IMAGE_MOMENTS_UNDEFINED: "Die ROI-Momente konnten nicht bestimmt werden.",
+  IMAGE_MULTI_PEAK: "Es wurden mehrere deutliche Peaks erkannt.",
+  IMAGE_NEGATIVE_POWER: "Der negative Leistungsanteil ist im Verhältnis zur positiven Leistung hoch; Hintergrundkorrektur prüfen.",
+  IMAGE_NOISE_SCALE_SUSPECT: "Die Hintergrund-Rauschschätzung kann Strahl und Rauschen möglicherweise nicht sicher trennen.",
+  IMAGE_ORIENTATION_UNSTABLE: "Die Strahlorientierung ist instabil.",
+  IMAGE_PEDESTAL_HINT: "Ein verbleibender Hintergrundanteil kann die ausgewiesenen Breiten beeinflussen.",
+  IMAGE_RESIDUAL_HIGH: "Das Residuum des Gauß-Modells überschreitet die Freigabegrenze.",
+  IMAGE_ROI_SENSITIVE: "Die freigegebenen Groessen reagieren merklich auf die ROI-Wahl.",
+  IMAGE_ROI_UNDETERMINABLE: "Die ROI-Stabilitätsprüfung konnte die Empfindlichkeit nicht bestimmen.",
+  IMAGE_SATURATION: "Pixel liegen an oder über der Sättigungsgrenze.",
+  IMAGE_CLIPPING_SUSPECT: "Viele Pixel haben unterhalb der Sättigungsgrenze denselben Bild-Maximalwert; Sensor-Clipping ist möglich.",
+  IMAGE_RADIAL_NOISE_DOMINATED: "Die radiale Verteilung wird vom Hintergrundrauschen dominiert.",
+  IMAGE_WIDTH_RESOLUTION_LIMIT: "Die kleinere freigegebene Breite liegt unterhalb der Aufloesungsgrenze und wird bei Pixelintegration systematisch zu hoch gemessen.",
+  IMAGE_ABSORBED_POWER: "Das Hintergrund-Modell kann einen breiten, schwachen Strahlflügel enthalten und die freigegebene Breite beeinflussen.",
+  IMAGE_TIER_DISAGREEMENT: "Die freigegebenen Blendenbreiten weichen von den diagnostischen ROI-Momenten ab.",
+  IMAGE_WIDTH_SCATTER: "Die freigegebenen Breiten haben durch das Bildrauschen eine merkliche Streuung.",
+  IMAGE_COVERAGE_LOSS: "Fehlende Daten in der Messblende verschieben die freigegebenen Breiten leicht.",
+  IMAGE_ALPHA_GATE_WEAK: "Die Konsistenzpruefung der Blende hat bei diesem Bildrauschen keine Trennschaerfe.",
+  IMAGE_TIER_CHECK_UNAVAILABLE: "Die freigegebenen Breiten wurden nicht mit den diagnostischen ROI-Momenten verglichen.",
+  IMAGE_WING_PROBE_REDUCED: "Die weitesten Flügelsonden passen nicht in das ROI.",
+  IMAGE_BACKGROUND_GRADIENT_IN_REFERENCE: "Die Hintergrundreferenz weist einen Verlauf auf, den eine Einzelwert-Korrektur im Bild belässt.",
+  IMAGE_BEAM_IN_BACKGROUND_REFERENCE:
+    "Ein Hintergrund-Referenzrechteck schneidet die 4-sigma-Ellipse des Strahls; das Hintergrund-Modell kann Strahlleistung enthalten.",
+};
+
 const IMAGE_WARNING_TITLE_EN: Record<string, string> = {
   IMAGE_APERTURE_SUPPRESSED: "Stage-B aperture suppressed",
   IMAGE_AXIS_NOT_RESOLVED: "Axis not resolved",
@@ -555,6 +648,7 @@ const IMAGE_WARNING_TITLE_EN: Record<string, string> = {
   IMAGE_WING_PROBE_REDUCED: "Wing probes reduced by the ROI",
   // S20 stage E (additive).
   IMAGE_BACKGROUND_GRADIENT_IN_REFERENCE: "Background reference is tilted",
+  IMAGE_BEAM_IN_BACKGROUND_REFERENCE: "Background reference intersects beam",
 };
 
 const IMAGE_WARNING_TITLE_DE: Record<string, string> = {
@@ -590,6 +684,7 @@ const IMAGE_WARNING_TITLE_DE: Record<string, string> = {
   IMAGE_WING_PROBE_REDUCED: "Flügelsonden durch ROI verkürzt",
   // S20 Stufe E (additiv).
   IMAGE_BACKGROUND_GRADIENT_IN_REFERENCE: "Untergrundreferenz ist verkippt",
+  IMAGE_BEAM_IN_BACKGROUND_REFERENCE: "Hintergrundreferenz schneidet Strahl",
 };
 
 const en: Strings = {
@@ -1011,12 +1106,13 @@ const en: Strings = {
   imgAnisoPxNote: "anisotropic pixels not directly convertible",
   imgSigmaBUnmeasurable: "sigma_B not measurable",
   imgPhysicalFromFit: "from fit (stage B suppressed)",
-  imgUngatedHint: "indicative - not release-checked",
-  imgUngatedHintTitle:
-    "The automatic release check applies only to the D4sigma main result. This value is shown unchecked, for orientation only.",
+  imgUngatedHint: "guideline value - no gate check of its own",
+  imgUngatedInfo:
+    "Only D4sigma passes the release checks. The 1/e2 and FWHM values are profile-cut widths, and the fit 4-sigma value is a model width. When D4sigma is suppressed, these values rest on the unreleased fit and are shown for orientation only. The D4sigma release checks cover fit convergence, non-positive amplitude, residual ceiling, the ellipse/ROI clipping gate, alpha consistency, multi-peak, and coverage.",
   imgResidualRoiLabel: (width, height) => `RESIDUAL MAP — ROI ${width}×${height} px`,
   imgResidualWindowLabel: (width, height) => `RESIDUAL MAP — ${width}×${height} px`,
   imgWarningTitle: (code) => IMAGE_WARNING_TITLE_EN[code] ?? code,
+  warningDescription: (code, fallback) => WARNING_DESCRIPTION_EN[code as SimulationWarningCode] ?? fallback,
   imgValid: "valid",
   imgPeak: "peak",
   imgEncircled: "encircled power radii",
@@ -1538,12 +1634,13 @@ const de: Strings = {
   imgAnisoPxNote: "anisotrope Pixel nicht direkt umrechenbar",
   imgSigmaBUnmeasurable: "sigma_B nicht messbar",
   imgPhysicalFromFit: "aus dem Fit (Stufe B unterdrückt)",
-  imgUngatedHint: "Richtwert - ohne Freigabeprüfung",
-  imgUngatedHintTitle:
-    "Die automatische Freigabeprüfung gilt nur für das D4sigma-Hauptergebnis. Dieser Wert wird ungeprüft angezeigt und dient nur zur Orientierung.",
+  imgUngatedHint: "Richtwert - keine eigene Freigabe",
+  imgUngatedInfo:
+    "Nur D4sigma durchlaeuft die Freigabepruefungen. Die 1/e2- und FWHM-Werte sind Breiten aus Profilschnitten, die Fit-4-sigma-Breite ist eine Modellbreite. Wenn D4sigma unterdrueckt ist, beruhen diese Werte auf dem nicht freigegebenen Fit und dienen nur der Orientierung. Die D4sigma-Freigabepruefungen umfassen Fit-Konvergenz, nicht-positive Amplitude, Residuenobergrenze, das Ellipse/ROI-Clipping-Gate, Alpha-Konsistenz, Mehrfach-Peak und Abdeckung.",
   imgResidualRoiLabel: (width, height) => `RESIDUENKARTE — ROI ${width}×${height} px`,
   imgResidualWindowLabel: (width, height) => `RESIDUENKARTE — ${width}×${height} px`,
   imgWarningTitle: (code) => IMAGE_WARNING_TITLE_DE[code] ?? code,
+  warningDescription: (code, fallback) => WARNING_DESCRIPTION_DE[code as SimulationWarningCode] ?? fallback,
   imgValid: "gültig",
   imgPeak: "Peak",
   imgEncircled: "eingeschlossene Leistungsradien",

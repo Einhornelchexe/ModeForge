@@ -57,10 +57,14 @@ import {
 } from "../../apps/web/src/views/image.ts";
 import { strings } from "../../apps/web/src/i18n.ts";
 import { S } from "../../apps/web/src/store.ts";
+import { warningCard } from "../../apps/web/src/views/ui.ts";
 import {
   applySuggestedImageRoi,
   bgRectEditorAvailable,
+  completeNumber,
   normalizeImageDrawTarget,
+  numericDraftValue,
+  resolveIdleImagePointerAction,
   selectImagePreviewView,
   transitionImageDrawMode,
   type DarkError,
@@ -1348,4 +1352,107 @@ test("VF-44: a profile residual lane is omitted when every residual sample is no
     },
   } as ImageAnalysisResult;
   assert.equal(buildProfileResidualPlotData(variant, "cutX"), null);
+});
+
+function suppressedResult(): ImageAnalysisResult {
+  const healthy = cleanResult();
+  return withOverrides(healthy, {
+    moments: { ...((healthy as unknown as Mutable).moments as Mutable), stageB: null, suppressionReason: "fit_not_converged" },
+  });
+}
+
+test("VF-45: ungated headline cards render the info glyph and localized long text in both languages", () => {
+  const expected = {
+    en: "Only D4sigma passes the release checks. The 1/e2 and FWHM values are profile-cut widths, and the fit 4-sigma value is a model width. When D4sigma is suppressed, these values rest on the unreleased fit and are shown for orientation only. The D4sigma release checks cover fit convergence, non-positive amplitude, residual ceiling, the ellipse/ROI clipping gate, alpha consistency, multi-peak, and coverage.",
+    de: "Nur D4sigma durchlaeuft die Freigabepruefungen. Die 1/e2- und FWHM-Werte sind Breiten aus Profilschnitten, die Fit-4-sigma-Breite ist eine Modellbreite. Wenn D4sigma unterdrueckt ist, beruhen diese Werte auf dem nicht freigegebenen Fit und dienen nur der Orientierung. Die D4sigma-Freigabepruefungen umfassen Fit-Konvergenz, nicht-positive Amplitude, Residuenobergrenze, das Ellipse/ROI-Clipping-Gate, Alpha-Konsistenz, Mehrfach-Peak und Abdeckung.",
+  } as const;
+  assert.equal(strings("en").imgUngatedInfo, expected.en, "en long text is pinned in all three i18n places");
+  assert.equal(strings("de").imgUngatedInfo, expected.de, "de long text is pinned in all three i18n places");
+
+  const released = withImageState({ loaded: true, result: cleanResult(), width: 32, height: 32 }, () => renderImageTab(strings("en")));
+  assert.equal((released.match(/mf-info-glyph/g) ?? []).length, 0, "released D4sigma does not show the ungated info glyph");
+  assert.ok(!released.includes(expected.en), "released D4sigma does not show the ungated long text");
+
+  for (const lang of ["en", "de"] as const) {
+    const T = strings(lang);
+    const html = withImageState({ loaded: true, result: suppressedResult(), width: 32, height: 32 }, () => renderImageTab(T));
+    assert.equal(T.imgUngatedInfo, expected[lang], `${lang}: Strings.imgUngatedInfo matches the pinned long text`);
+    assert.equal((html.match(/class="mf-info-glyph"/g) ?? []).length, 3, `${lang}: one glyph on each ungated headline card`);
+    assert.equal(html.split(T.imgUngatedInfo).length - 1, 3, `${lang}: long text appears once per ungated card`);
+    assert.ok(html.includes(T.imgUngatedHint), `${lang}: short label stays visible`);
+    assert.ok(!html.includes('tile-hint" title='), `${lang}: title-attribute tooltip is gone`);
+    assert.ok(html.includes('tabindex="0"'), `${lang}: glyph is keyboard-focusable`);
+    assert.equal((html.match(/class="mf-info-glyph" tabindex="0" role="button"/g) ?? []).length, 3, `${lang}: glyphs expose button semantics`);
+    assert.equal((html.match(/class="mf-info-glyph" tabindex="0" role="button" aria-label="/g) ?? []).length, 3, `${lang}: glyphs have localized accessible names`);
+    for (const panelId of ["img-ungated-info-1e2", "img-ungated-info-fwhm", "img-ungated-info-fit"]) {
+      assert.ok(html.includes(`aria-describedby="${panelId}"`), `${lang}: glyph describes ${panelId}`);
+      assert.ok(html.includes(`<span id="${panelId}" class="mf-info-panel">`), `${lang}: ${panelId} is valid span content`);
+    }
+  }
+});
+
+test("VF-46: localized warning cards retain the raw engine detail below the primary sentence", () => {
+  const engineMessage = "Cannot propagate: aperture 0.35 mm is below the 0.50 mm minimum.";
+  for (const lang of ["en", "de"] as const) {
+    const T = strings(lang);
+    const localized = T.warningDescription("INVALID_INPUT", engineMessage);
+    const html = warningCard({ code: "INVALID_INPUT", severity: "warning", message: engineMessage }, "", undefined, localized);
+    assert.ok(html.includes(localized), `${lang}: localized sentence is shown`);
+    assert.ok(html.includes(engineMessage), `${lang}: engine message with its numbers is retained`);
+    assert.ok(html.indexOf(localized) < html.indexOf(engineMessage), `${lang}: localized sentence remains primary`);
+    assert.ok(html.includes('class="mf-warning-engine-detail"'), `${lang}: raw engine detail has its dimmed detail styling`);
+  }
+});
+
+test("VF-47: numeric drafts keep S22 prefixes incomplete and preserve historical blank semantics for existing fields", () => {
+  assert.equal(completeNumber(""), null, "blank is not a complete decimal");
+  assert.equal(completeNumber(" "), null, "whitespace is not a complete decimal");
+  assert.equal(completeNumber("1e"), null, "incomplete exponent remains a draft");
+  assert.equal(completeNumber("5."), 5, "trailing-decimal input is a complete number");
+  assert.equal(completeNumber("0x10"), null, "hexadecimal JavaScript syntax is rejected");
+  assert.equal(numericDraftValue(""), 0, "a blank non-optional legacy field still applies zero");
+  assert.equal(numericDraftValue(" "), 0, "whitespace-only non-optional legacy input still applies zero");
+  assert.equal(numericDraftValue("", { optional: true }), undefined, "an optional blank clears the optional value");
+  assert.equal(numericDraftValue("1e"), null, "incomplete entries do not overwrite the committed value");
+});
+
+test("VF-48: idle pointer priority prefers ROI resize, then a user background rectangle, then ROI create", () => {
+  const roi = { x0: 10, y0: 10, width: 80, height: 80 };
+  const userBgRects = [{ x0: 30, y0: 30, width: 20, height: 20 }];
+  const base = {
+    bgMethod: "rect-median" as const,
+    userBgRects,
+    roi,
+    hitPx: 2,
+    imageWidth: 160,
+    imageHeight: 128,
+  };
+
+  const insideBg = resolveIdleImagePointerAction({ ...base, point: { x: 40, y: 40 } });
+  assert.equal(insideBg.kind, "bg-rect", "toggle off: interior of a user bg rect is a bg-rect grab");
+  if (insideBg.kind === "bg-rect") {
+    assert.equal(insideBg.index, 0);
+    assert.equal(insideBg.hit, "move");
+  }
+
+  const roiEdge = resolveIdleImagePointerAction({ ...base, point: { x: 10, y: 50 } });
+  assert.equal(roiEdge.kind, "roi-resize", "ROI edge/handle wins over a bg rect further inside");
+  if (roiEdge.kind === "roi-resize") assert.equal(roiEdge.handle, "w");
+
+  const freeArea = resolveIdleImagePointerAction({ ...base, point: { x: 5, y: 5 } });
+  assert.equal(freeArea.kind, "roi-create", "free area still creates a ROI");
+
+  const autoMode = resolveIdleImagePointerAction({
+    ...base,
+    bgMethod: "auto",
+    point: { x: 40, y: 40 },
+  });
+  assert.equal(autoMode.kind, "roi-move", "auto-mode display rects are not grabbed even if leftover user rects exist");
+
+  const noneMethod = resolveIdleImagePointerAction({
+    ...base,
+    bgMethod: "none",
+    point: { x: 40, y: 40 },
+  });
+  assert.equal(noneMethod.kind, "roi-move", "non-rectangle methods leave the ROI move path in place");
 });

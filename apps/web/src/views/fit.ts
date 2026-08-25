@@ -49,7 +49,7 @@ export function renderFitTab(T: Strings): string {
   const res = fit.res;
   const meas = fit.meas;
   const plot = fitPlot();
-  const fitWarnRows = [...fit.errs, ...(res?.warnings ?? []).map((w) => `${w.code} — ${w.message}`)];
+  const fitWarnRows = [...fit.errs, ...(res?.warnings ?? []).map((w) => `${w.code} — ${T.warningDescription(w.code, w.message)}`)];
   const hasFitResult = !!res && res.ok;
   const tile = (label: string, value: string, color = "#E7ECF4") =>
     `<div class="mf-card result-tile"><div class="tile-label">${esc(label)}</div><div class="tile-value" style="color: ${color};">${esc(value)}</div></div>`;

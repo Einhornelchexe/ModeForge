@@ -188,6 +188,22 @@ async function canvasHasPurpleRectangleEdges(
   }, { imageWidth, imageHeight, rects });
 }
 
+async function canvasHasIdleBackgroundRectHandles(page: Page): Promise<boolean> {
+  return page.locator("#img-overlay").evaluate((element) => {
+    const canvas = element as HTMLCanvasElement;
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return false;
+    const image = ctx.getImageData(0, 0, canvas.width, canvas.height);
+    let pixels = 0;
+    for (let offset = 0; offset < image.data.length; offset += 4) {
+      if (image.data[offset] === 226 && image.data[offset + 1] === 198 && image.data[offset + 2] === 255 && image.data[offset + 3] === 255) {
+        pixels += 1;
+      }
+    }
+    return pixels >= 8;
+  });
+}
+
 async function dragFullFrameImage(page: Page, from: { x: number; y: number }, to: { x: number; y: number }, width: number, height: number): Promise<void> {
   const box = await page.locator("#img-canvas").boundingBox();
   if (!box) throw new Error("image canvas is not laid out");
@@ -314,6 +330,23 @@ test("two_lobe_suppressed.tif renders the suppressed headline", async ({ page })
   await expect(headline).toContainText("suppressed", { timeout: 30_000 });
   // The suppressed marker must be followed by an actual suppression reason.
   await expect(headline).toHaveText(/^suppressed:\s*\S/);
+});
+
+test("right-hand ungated info panels stay inside the center column", async ({ page }) => {
+  await openAnalyzerTab(page);
+  await uploadImage(page, "two_lobe_suppressed.tif");
+  const headline = await runAnalysis(page);
+  await expect(headline).toContainText("suppressed", { timeout: 30_000 });
+
+  const resultTiles = page.locator(".img-tiles .result-tile");
+  await expect(resultTiles).toHaveCount(4);
+  const rightHandPanel = resultTiles.nth(1).locator(".mf-info-panel");
+  await resultTiles.nth(1).locator(".mf-info-glyph").hover();
+  await expect(rightHandPanel).toBeVisible();
+  await expect(rightHandPanel).toHaveCSS("right", "0px");
+  await expect.poll(() =>
+    page.locator(".wb-center").evaluate((element) => element.scrollWidth <= element.clientWidth),
+  ).toBe(true);
 });
 
 test("CSV and JSON exports download non-empty analysis content", async ({ page }) => {
@@ -594,4 +627,70 @@ test("suggested ROI applies back into the rectangle inputs", async ({ page }) =>
   for (const key of ["imgRoiX0", "imgRoiY0", "imgRoiW", "imgRoiH"]) {
     await expect(page.locator(`input[data-k="${key}"]`)).toHaveValue(/\d/);
   }
+});
+
+test("existing background rectangles stay grabbable when the draw toggle is off", async ({ page }) => {
+  const width = 160;
+  const height = 128;
+  await openAnalyzerTab(page);
+  await uploadGeneratedImage(page, "bg_idle_grab.tif", gray16Tiff(width, height));
+  await page.locator('select[data-k="imgBgMethod"]').selectOption("rect-median");
+  await page.locator('button[data-act="img-bg-rect-add"]').click();
+  await expect(page.locator('input[data-k="bgRectX0-0"]')).toBeVisible();
+  await expect(page.getByRole("button", { name: "Measurement ROI", exact: true })).toHaveClass(/active/);
+  await expect(page.getByRole("button", { name: "Background rectangle", exact: true })).not.toHaveClass(/active/);
+  await expect(page.locator('button[data-act="img-roi-mode"][data-arg="full"]')).toHaveClass(/active/);
+  await expect.poll(() => canvasHasIdleBackgroundRectHandles(page), { message: "the active idle rectangle exposes resize handles" }).toBe(true);
+
+  const rectBefore = await bgRectFields(page, 0);
+  await dragFullFrameImage(
+    page,
+    { x: rectBefore.x0 + rectBefore.width / 2, y: rectBefore.y0 + rectBefore.height / 2 },
+    { x: rectBefore.x0 + rectBefore.width / 2 + 12, y: rectBefore.y0 + rectBefore.height / 2 + 8 },
+    width,
+    height,
+  );
+  const rectMoved = await bgRectFields(page, 0);
+  expect(rectMoved.x0).not.toBe(rectBefore.x0);
+  expect(rectMoved.y0).not.toBe(rectBefore.y0);
+  await expect(page.locator('button[data-act="img-roi-mode"][data-arg="full"]')).toHaveClass(/active/);
+  await expect(page.locator('input[data-k="imgRoiX0"]')).toHaveCount(0);
+
+  await dragFullFrameImage(page, { x: 90, y: 80 }, { x: 120, y: 105 }, width, height);
+  await expect(page.locator('button[data-act="img-roi-mode"][data-arg="rect"]')).toHaveClass(/active/);
+  const roiAfter = await roiFields(page);
+  expect(roiAfter.every((value) => /^\d+$/.test(value))).toBe(true);
+  expect(await bgRectFields(page, 0)).toEqual(rectMoved);
+});
+
+test("auto-mode corner rectangles stay non-interactive", async ({ page }) => {
+  const width = 64;
+  const height = 48;
+  const cornerRects = [
+    { x0: 0, y0: 0, width: 8, height: 6 },
+    { x0: 56, y0: 0, width: 8, height: 6 },
+    { x0: 0, y0: 42, width: 8, height: 6 },
+    { x0: 56, y0: 42, width: 8, height: 6 },
+  ];
+  await beginCanvasTextCapture(page);
+  await openAnalyzerTab(page);
+  await uploadImage(page, "gauss_released.tif");
+  await page.locator('button[data-act="img-auto-mode"]').click();
+  await runAnalysis(page);
+  await expect
+    .poll(() => canvasHasPurpleRectangleEdges(page, width, height, cornerRects), {
+      message: "automatic corner references use the established purple overlay path",
+    })
+    .toBe(true);
+
+  await dragFullFrameImage(page, { x: 3, y: 3 }, { x: 14, y: 12 }, width, height);
+
+  await expect
+    .poll(() => canvasHasPurpleRectangleEdges(page, width, height, cornerRects), {
+      message: "dragging an auto corner does not move the display-only rectangles",
+    })
+    .toBe(true);
+
+  await page.locator('select[data-k="imgBgMethod"]').selectOption("rect-median");
+  await expect(page.locator('input[data-k="bgRectX0-0"]')).toHaveCount(0);
 });

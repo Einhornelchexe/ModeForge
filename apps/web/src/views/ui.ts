@@ -32,6 +32,10 @@ export function segBtn(act: string, arg: string, label: string, active: boolean,
   return `<button data-act="${act}" data-arg="${esc(arg)}" class="mf-seg-btn${active ? " active" : ""}"${extra}>${esc(label)}</button>`;
 }
 
+export function infoBox(shortLabel: string, longText: string, panelId: string): string {
+  return `<span class="mf-info"><span class="mf-info-label">${esc(shortLabel)}</span><span class="mf-info-anchor"><span class="mf-info-glyph" tabindex="0" role="button" aria-label="${esc(shortLabel)}" aria-describedby="${esc(panelId)}">i</span><span id="${esc(panelId)}" class="mf-info-panel">${esc(longText)}</span></span></span>`;
+}
+
 export function toggle(act: string, on: boolean): string {
   return `<button data-act="${act}" class="mf-toggle${on ? " on" : ""}" type="button"><span class="knob"></span></button>`;
 }
@@ -42,9 +46,11 @@ const SEV_STYLE: Record<string, { bg: string; border: string; dot: string; code:
   info: { bg: "rgba(111,168,245,0.06)", border: "rgba(111,168,245,0.25)", dot: "#6FA8F5", code: "#9CC1F5" },
 };
 
-export function warningCard(w: SimulationWarning, meta: string, localizedTitle?: string): string {
+export function warningCard(w: SimulationWarning, meta: string, localizedTitle?: string, localizedDescription?: string): string {
   const sv = SEV_STYLE[w.severity] ?? SEV_STYLE.info;
   const title = localizedTitle && localizedTitle !== "" ? localizedTitle : w.code;
+  const description = localizedDescription && localizedDescription !== "" ? localizedDescription : w.message;
+  const hasLocalizedDescription = description !== w.message;
   const codeTail = w.code.startsWith("IMAGE_") ? w.code : "";
   return `
     <div style="border: 1px solid ${sv.border}; background: ${sv.bg}; border-radius: 7px; padding: 8px 10px;">
@@ -53,9 +59,14 @@ export function warningCard(w: SimulationWarning, meta: string, localizedTitle?:
         <span style="font: 600 12px 'Space Grotesk', sans-serif; color: ${sv.code};">${esc(title)}</span>
         <span style="font: 400 10px 'IBM Plex Mono'; color: #5C6675;">${esc(meta)}</span>
       </div>
-      <div style="font: 400 11px 'Space Grotesk'; color: #8B94A3; margin-top: 4px; line-height: 1.45;">${esc(w.message)}${
+      <div style="font: 400 11px 'Space Grotesk'; color: #8B94A3; margin-top: 4px; line-height: 1.45;">${esc(description)}${
         codeTail ? ` <span style="font: 400 10px 'IBM Plex Mono', ui-monospace, monospace; color: #5C6675;">${esc(codeTail)}</span>` : ""
       }</div>
+      ${
+        hasLocalizedDescription
+          ? `<div class="mf-warning-engine-detail" style="font: 400 10px 'IBM Plex Mono', ui-monospace, monospace; color: #5C6675; margin-top: 3px; line-height: 1.4;">${esc(w.message)}</div>`
+          : ""
+      }
     </div>`;
 }
 

@@ -111,6 +111,28 @@ export type ImageRoiMode = "full" | "rect" | "auto";
 export type ImageDrawTarget = "roi" | "bg-rect";
 export type ImagePreviewView = "closeup" | "full";
 
+export type NumericDraftOptions = { optional?: boolean; infinity?: boolean };
+
+// S22 residual-scale editing must keep decimal prefixes such as "0." and
+// "1e" as visible drafts until they become complete numbers. The strict
+// decimal grammar also rejects JavaScript-only forms such as hexadecimal
+// "0x10". For every pre-existing non-optional numeric field, blank and
+// whitespace-only input intentionally retain Number's historical zero value.
+export function completeNumber(raw: string): number | null {
+  const trimmed = raw.trim();
+  if (trimmed === "") return null;
+  if (!/^[+-]?(?:\d+(?:\.\d*)?|\.\d+)(?:[eE][+-]?\d+)?$/.test(trimmed)) return null;
+  const value = Number(trimmed);
+  return Number.isFinite(value) ? value : null;
+}
+
+export function numericDraftValue(raw: string, opts: NumericDraftOptions = {}): number | undefined | "Infinity" | null {
+  const trimmed = raw.trim();
+  if (trimmed === "") return opts.optional ? undefined : 0;
+  if (opts.infinity && /^inf(inity)?$/i.test(trimmed)) return "Infinity";
+  return completeNumber(raw);
+}
+
 export function bgRectEditorAvailable(method: ImageBgMethod): boolean {
   return method === "rect-median" || method === "robust-plane";
 }
@@ -120,6 +142,91 @@ export function bgRectEditorAvailable(method: ImageBgMethod): boolean {
 // path unless the operator explicitly has a rectangle-capable method open.
 export function normalizeImageDrawTarget(drawTarget: ImageDrawTarget, method: ImageBgMethod): ImageDrawTarget {
   return drawTarget === "bg-rect" && bgRectEditorAvailable(method) ? "bg-rect" : "roi";
+}
+
+export type ImageRectHandle = "n" | "s" | "e" | "w" | "nw" | "ne" | "sw" | "se";
+export type BgRectEditHit = { index: number; rect: BgRect; hit: ImageRectHandle | "move" };
+export type IdleImagePointerAction =
+  | { kind: "roi-resize"; handle: ImageRectHandle; rect: BgRect }
+  | { kind: "roi-move"; rect: BgRect }
+  | { kind: "roi-create" }
+  | { kind: "bg-rect"; index: number; rect: BgRect; hit: ImageRectHandle | "move" };
+
+export function hitRoiEdit(
+  rect: BgRect,
+  pt: { x: number; y: number },
+  hitPx: number,
+  imgW: number,
+  imgH: number,
+  target: ImageDrawTarget,
+): ImageRectHandle | "move" | null {
+  const x0 = rect.x0;
+  const y0 = rect.y0;
+  const x1 = rect.x0 + rect.width;
+  const y1 = rect.y0 + rect.height;
+  const nearL = Math.abs(pt.x - x0) <= hitPx;
+  const nearR = Math.abs(pt.x - x1) <= hitPx;
+  const nearT = Math.abs(pt.y - y0) <= hitPx;
+  const nearB = Math.abs(pt.y - y1) <= hitPx;
+  const inX = pt.x >= x0 - hitPx && pt.x <= x1 + hitPx;
+  const inY = pt.y >= y0 - hitPx && pt.y <= y1 + hitPx;
+  if (nearT && nearL) return "nw";
+  if (nearT && nearR) return "ne";
+  if (nearB && nearL) return "sw";
+  if (nearB && nearR) return "se";
+  if (nearT && inX) return "n";
+  if (nearB && inX) return "s";
+  if (nearL && inY) return "w";
+  if (nearR && inY) return "e";
+  if (pt.x >= x0 && pt.x <= x1 && pt.y >= y0 && pt.y <= y1) {
+    // This no-move rule is ROI-specific: near-full-frame background samples remain movable.
+    const frameArea = imgW * imgH;
+    if (target === "roi" && frameArea > 0 && (rect.width * rect.height) / frameArea >= 0.98) return null;
+    return "move";
+  }
+  return null;
+}
+
+export function hitUserBgRectEdit(
+  rects: readonly BgRect[],
+  pt: { x: number; y: number },
+  hitPx: number,
+  imgW: number,
+  imgH: number,
+): BgRectEditHit | null {
+  // Later rectangles paint above earlier rectangles, so they also own an
+  // overlap during hit testing. This keeps selection, move and resize
+  // deterministic when reference samples overlap.
+  for (let index = rects.length - 1; index >= 0; index -= 1) {
+    const rect = rects[index];
+    const hit = hitRoiEdit(rect, pt, hitPx, imgW, imgH, "bg-rect");
+    if (hit) return { index, rect, hit };
+  }
+  return null;
+}
+
+// Idle pointer (draw toggle off): ROI resize handles win, then a user
+// background rectangle, then ROI move/create. Display-only auto corner
+// rects are never passed in as userBgRects.
+export function resolveIdleImagePointerAction(input: {
+  bgMethod: ImageBgMethod;
+  userBgRects: readonly BgRect[];
+  roi: BgRect | null;
+  point: { x: number; y: number };
+  hitPx: number;
+  imageWidth: number;
+  imageHeight: number;
+}): IdleImagePointerAction {
+  const roiHit = input.roi ? hitRoiEdit(input.roi, input.point, input.hitPx, input.imageWidth, input.imageHeight, "roi") : null;
+  if (roiHit && roiHit !== "move" && input.roi) {
+    return { kind: "roi-resize", handle: roiHit, rect: input.roi };
+  }
+  if (bgRectEditorAvailable(input.bgMethod) && input.userBgRects.length > 0) {
+    const bgHit = hitUserBgRectEdit(input.userBgRects, input.point, input.hitPx, input.imageWidth, input.imageHeight);
+    if (bgHit) return { kind: "bg-rect", index: bgHit.index, rect: bgHit.rect, hit: bgHit.hit };
+  }
+  if (roiHit === "move" && input.roi) return { kind: "roi-move", rect: input.roi };
+  return { kind: "roi-create" };
 }
 
 // Keep the full-frame override paired with the draw-target transition that

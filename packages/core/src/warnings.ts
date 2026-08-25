@@ -53,7 +53,10 @@ export type SimulationWarningCode =
   // S20 stage E (background statistics): the background REFERENCE carries a
   // linear trend while the applied model subtracts a single number. Additive
   // only; no existing code's meaning changes.
-  | "IMAGE_BACKGROUND_GRADIENT_IN_REFERENCE";
+  | "IMAGE_BACKGROUND_GRADIENT_IN_REFERENCE"
+  // S23: a background reference rectangle overlaps the beam geometry used for
+  // the released result or its converged fit fallback. Additive only.
+  | "IMAGE_BEAM_IN_BACKGROUND_REFERENCE";
 
 export type SimulationWarning = {
   severity: WarningSeverity;

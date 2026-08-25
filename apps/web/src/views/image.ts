@@ -49,7 +49,7 @@ import {
   type ImageResidualMode,
 } from "../state.ts";
 import { S } from "../store.ts";
-import { bareInput, fieldCol, segBtn, unitInput, warningCard, warnLines } from "./ui.ts";
+import { bareInput, fieldCol, infoBox, segBtn, unitInput, warningCard, warnLines } from "./ui.ts";
 
 type Profile = ImageAnalysisResult["profiles"]["cutX"];
 type Moments = NonNullable<ImageAnalysisResult["moments"]["stageB"]>;
@@ -721,9 +721,15 @@ function panel(title: string, inner: string): string {
   return `<div class="mf-card img-panel"><div class="mf-card-title">${esc(title)}</div>${inner}</div>`;
 }
 
-function tile(label: string, value: KvValue, color = "#E7ECF4", hint?: { text: string; title: string }): string {
+function tile(
+  label: string,
+  value: KvValue,
+  color = "#E7ECF4",
+  hint?: { shortLabel: string; longText: string },
+  hintPanelId?: string,
+): string {
   const inner = typeof value === "string" ? esc(value) : value.html;
-  const hintLine = hint ? `<div class="tile-hint" title="${esc(hint.title)}">${esc(hint.text)}</div>` : "";
+  const hintLine = hint && hintPanelId ? `<div class="tile-hint">${infoBox(hint.shortLabel, hint.longText, hintPanelId)}</div>` : "";
   return `<div class="mf-card result-tile"><div class="tile-label">${esc(label)}</div><div class="tile-value" style="color: ${color};">${inner}</div>${hintLine}</div>`;
 }
 
@@ -1695,7 +1701,7 @@ export function renderImageTab(T: Strings): string {
       res?.fits.physical?.thetaRad,
     ),
   };
-  const ungatedHint = res && !releasedOk ? { text: T.imgUngatedHint, title: T.imgUngatedHintTitle } : undefined;
+  const ungatedHint = res && !releasedOk ? { shortLabel: T.imgUngatedHint, longText: T.imgUngatedInfo } : undefined;
   const roiOutOfRange = typedRoi?.kind === "invalid";
   const runBlocked = st.busy || !st.loaded || typedRoi?.kind === "invalid" || typedRoi?.kind === "incomplete";
 
@@ -1720,7 +1726,7 @@ export function renderImageTab(T: Strings): string {
        ${histogramSparkline(res.raw.histogram.counts)}
        ${
          res.warnings.length > 0
-           ? `<div class="mf-sec-title">${esc(T.imgWarnings)}</div><div class="img-warns">${res.warnings.map((wv) => warningCard(wv, "", T.imgWarningTitle(wv.code))).join("")}</div>`
+           ? `<div class="mf-sec-title">${esc(T.imgWarnings)}</div><div class="img-warns">${res.warnings.map((wv) => warningCard(wv, "", T.imgWarningTitle(wv.code), T.warningDescription(wv.code, wv.message))).join("")}</div>`
            : ""
        }`
     : `<div class="mf-note-faint">${esc(T.imgNoData)}</div>`;
@@ -1970,9 +1976,9 @@ export function renderImageTab(T: Strings): string {
         <div class="mf-card-title">${esc(T.imgKeyResults)}</div>
         <div class="img-tiles">
           ${tile(T.imgD4Sigma, d4Value, d4Color)}
-          ${tile(T.imgWidth1e2, profilePairHtml(T, profileMajor ?? null, profileMinor ?? null, (w) => w.oneOverESquaredData, pitch), "#E7ECF4", ungatedHint)}
-          ${tile(T.imgWidthFwhm, profilePairHtml(T, profileMajor ?? null, profileMinor ?? null, (w) => w.fwhmData, pitch), "#E7ECF4", ungatedHint)}
-          ${tile(T.imgFitWidth, fitWidthValue, "#E7ECF4", ungatedHint)}
+          ${tile(T.imgWidth1e2, profilePairHtml(T, profileMajor ?? null, profileMinor ?? null, (w) => w.oneOverESquaredData, pitch), "#E7ECF4", ungatedHint, "img-ungated-info-1e2")}
+          ${tile(T.imgWidthFwhm, profilePairHtml(T, profileMajor ?? null, profileMinor ?? null, (w) => w.fwhmData, pitch), "#E7ECF4", ungatedHint, "img-ungated-info-fwhm")}
+          ${tile(T.imgFitWidth, fitWidthValue, "#E7ECF4", ungatedHint, "img-ungated-info-fit")}
         </div>
       </div>`
     : "";

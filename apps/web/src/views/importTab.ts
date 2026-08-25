@@ -38,12 +38,12 @@ export function renderImportTab(T: Strings): string {
   const unresolved = zmxJob && zmxJob.ok && !zmxJob.value.result.ok ? zmxJob.value.result.unresolvedMaterials : [];
   const zmxWarnRows = zmxJob
     ? zmxJob.ok
-      ? zmxJob.value.result.warnings.map((w) => `${w.code} — ${w.message}`)
+      ? zmxJob.value.result.warnings.map((w) => `${w.code} — ${T.warningDescription(w.code, w.message)}`)
       : zmxJob.errors.map((t) => `ERROR — ${t}`)
     : [];
   const agfJob = imp.agf;
   const agfMats = agfJob?.ok ? agfJob.value.result.materials : [];
-  const agfWarnRows = agfJob?.ok ? agfJob.value.result.warnings.map((w) => `${w.code} — ${w.message}`) : [];
+  const agfWarnRows = agfJob?.ok ? agfJob.value.result.warnings.map((w) => `${w.code} — ${T.warningDescription(w.code, w.message)}`) : [];
   const canThickLens = canImportAsThickLens(stack);
   const zmxCardText =
     card && card.effectiveFocalLengthMm !== undefined

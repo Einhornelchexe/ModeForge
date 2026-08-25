@@ -123,7 +123,7 @@ function resultsPanel(T: Strings): string {
   const res = S.optResult;
   const optWarnRows = [
     ...S.optErrors.map((t) => `INVALID_INPUT — ${t}`),
-    ...(res?.warnings ?? []).map((w) => `${w.code} — ${w.message}`),
+    ...(res?.warnings ?? []).map((w) => `${w.code} — ${T.warningDescription(w.code, w.message)}`),
   ];
   const selSol = res?.solutions.find((x) => x.rank === S.optSel) ?? null;
   let optPlot: PlotVals | null = null;

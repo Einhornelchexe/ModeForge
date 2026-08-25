@@ -534,6 +534,8 @@ function rightPanel(T: Strings, sim: Sim): string {
                     ["componentId" in w ? (w as { componentId?: string }).componentId : undefined, "zMm" in w && (w as { zMm?: number }).zMm !== undefined ? `z ${sig((w as { zMm?: number }).zMm, 4)}mm` : undefined]
                       .filter(Boolean)
                       .join(" · "),
+                    undefined,
+                    T.warningDescription(w.code, w.message),
                   ),
                 )
                 .join("")}

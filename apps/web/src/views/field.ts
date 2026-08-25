@@ -66,7 +66,7 @@ function renderBeamlineMode(T: Strings): string {
   const probeIn = res && res.probes.length > 0 ? res.probes[0] : null;
   const probeOut = res && res.probes.length > 0 ? res.probes[res.probes.length - 1] : null;
   const transmission = probeIn && probeOut && probeIn.power > 0 ? (probeOut.power / probeIn.power) * 100 : 0;
-  const warnRows = [...f.errs, ...(res?.warnings ?? []).map((w) => `${w.code} — ${w.message}${w.zMm !== undefined ? ` (z ${sig(w.zMm, 4)}mm)` : ""}`)];
+  const warnRows = [...f.errs, ...(res?.warnings ?? []).map((w) => `${w.code} — ${T.warningDescription(w.code, w.message)}${w.zMm !== undefined ? ` (z ${sig(w.zMm, 4)}mm)` : ""}`)];
   const tile = (label: string, value: string, color = "#E7ECF4") =>
     `<div class="mf-card result-tile"><div class="tile-label">${esc(label)}</div><div class="tile-value" style="color: ${color};">${esc(value)}</div></div>`;
 
@@ -212,7 +212,7 @@ function renderSourceMode(T: Strings): string {
   const res = f.res;
   const beam = S.project.beam;
   const transmission = res ? (res.outputPower / res.inputPower) * 100 : 0;
-  const fieldWarnRows = [...f.errs, ...(res?.warnings ?? []).map((w) => `${w.code} — ${w.message}`)];
+  const fieldWarnRows = [...f.errs, ...(res?.warnings ?? []).map((w) => `${w.code} — ${T.warningDescription(w.code, w.message)}`)];
   // Cross-check vs Fast Mode: the field starts at its waist, so the paraxial
   // envelope at distance d is closed-form (core gaussianRadiusAtZ).
   let analytic: { wA: number; rel: number } | null = null;

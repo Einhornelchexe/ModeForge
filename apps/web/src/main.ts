@@ -21,13 +21,18 @@ import { plotVals, PLOT_FRAME, type PlotVals } from "./plot.ts";
 import {
   PRESETS,
   applySuggestedImageRoi,
+  hitUserBgRectEdit,
+  numericDraftValue,
   normalizeImageDrawTarget,
+  resolveIdleImagePointerAction,
   selectImagePreviewView,
   transitionImageDrawMode,
   type ImageColorMap,
   type ImageDrawTarget,
   type ImageProfileKey,
+  type ImageRectHandle,
   type ImageResidualMode,
+  type IdleImagePointerAction,
 } from "./state.ts";
 import { S } from "./store.ts";
 import { renderBeamlineTab } from "./views/beamline.ts";
@@ -261,7 +266,7 @@ type OverlayStroke = {
   alpha?: number;
 };
 
-type RoiHandle = "n" | "s" | "e" | "w" | "nw" | "ne" | "sw" | "se";
+type RoiHandle = ImageRectHandle;
 type RoiDragKind = "create" | "move" | "resize";
 
 type RoiDrag = {
@@ -873,53 +878,15 @@ function roiEditHitPx(canvas: HTMLCanvasElement, view: PixelView): number {
   return Math.max(3, (8 * view.width) / clientW);
 }
 
-function hitRoiEdit(
-  rect: OverlayRect,
-  pt: { x: number; y: number },
-  hitPx: number,
-  imgW: number,
-  imgH: number,
-  target: ImageDrawTarget,
-): RoiHandle | "move" | null {
-  const x0 = rect.x0;
-  const y0 = rect.y0;
-  const x1 = rect.x0 + rect.width;
-  const y1 = rect.y0 + rect.height;
-  const nearL = Math.abs(pt.x - x0) <= hitPx;
-  const nearR = Math.abs(pt.x - x1) <= hitPx;
-  const nearT = Math.abs(pt.y - y0) <= hitPx;
-  const nearB = Math.abs(pt.y - y1) <= hitPx;
-  const inX = pt.x >= x0 - hitPx && pt.x <= x1 + hitPx;
-  const inY = pt.y >= y0 - hitPx && pt.y <= y1 + hitPx;
-  if (nearT && nearL) return "nw";
-  if (nearT && nearR) return "ne";
-  if (nearB && nearL) return "sw";
-  if (nearB && nearR) return "se";
-  if (nearT && inX) return "n";
-  if (nearB && inX) return "s";
-  if (nearL && inY) return "w";
-  if (nearR && inY) return "e";
-  if (pt.x >= x0 && pt.x <= x1 && pt.y >= y0 && pt.y <= y1) {
-    // This no-move rule is ROI-specific: near-full-frame background samples remain movable.
-    const frameArea = imgW * imgH;
-    if (target === "roi" && frameArea > 0 && (rect.width * rect.height) / frameArea >= 0.98) return null;
-    return "move";
-  }
-  return null;
+function hitBgRectEdit(pt: { x: number; y: number }, hitPx: number, imgW: number, imgH: number) {
+  return hitUserBgRectEdit(S.img.bgRects, pt, hitPx, imgW, imgH);
 }
 
-type BgRectEditHit = { index: number; rect: OverlayRect; hit: RoiHandle | "move" };
-
-function hitBgRectEdit(pt: { x: number; y: number }, hitPx: number, imgW: number, imgH: number): BgRectEditHit | null {
-  // Later rectangles paint above earlier rectangles, so they also own an
-  // overlap during hit testing. This keeps selection, move and resize
-  // deterministic when reference samples overlap.
-  for (let index = S.img.bgRects.length - 1; index >= 0; index -= 1) {
-    const rect = S.img.bgRects[index];
-    const hit = hitRoiEdit(rect, pt, hitPx, imgW, imgH, "bg-rect");
-    if (hit) return { index, rect, hit };
-  }
-  return null;
+function idlePointerCursor(action: IdleImagePointerAction): RoiHandle | "move" | "create" {
+  if (action.kind === "bg-rect") return action.hit;
+  if (action.kind === "roi-resize") return action.handle;
+  if (action.kind === "roi-move") return "move";
+  return "create";
 }
 
 function roiCursor(hit: RoiHandle | "move" | "create"): string {
@@ -1448,7 +1415,9 @@ function drawOverlay(ctx: CanvasRenderingContext2D, overlay: ImageOverlay, view:
         c.strokeRect(rect.x0 + 0.5, rect.y0 + 0.5, rect.width - 1, rect.height - 1);
       },
     });
-    if (isBgRectDrawMode() && overlay.activeBgRectIndex === index) {
+    // An active rectangle remains visibly editable even with the draw toggle
+    // off, matching the idle grab path and giving the operator an affordance.
+    if (overlay.activeBgRectIndex === index) {
       drawRoiHandles(strokes, rect, viewSpan, "#E2C6FF");
     }
   });
@@ -3436,18 +3405,32 @@ const actions: Record<string, (arg: string) => void> = {
 
 type NumApply = (v: number | undefined | "Infinity") => void;
 
+// `rerender()` replaces the focused input. Defer numeric redraws briefly so a
+// sequence such as "1e" remains one uninterrupted draft; blur and actions
+// still use the normal immediate draft-cleanup path.
+let currentInputUsesNumericDraft = false;
+let pendingNumericDraftRerender: ReturnType<typeof setTimeout> | null = null;
+
+function deferNumericDraftRerender(): void {
+  if (pendingNumericDraftRerender !== null) clearTimeout(pendingNumericDraftRerender);
+  pendingNumericDraftRerender = setTimeout(() => {
+    pendingNumericDraftRerender = null;
+    rerender();
+  }, 80);
+}
+
+function cancelDeferredNumericDraftRerender(): void {
+  if (pendingNumericDraftRerender === null) return;
+  clearTimeout(pendingNumericDraftRerender);
+  pendingNumericDraftRerender = null;
+}
+
 function numDraft(key: string, raw: string, apply: NumApply, opts: { optional?: boolean; infinity?: boolean } = {}): void {
+  currentInputUsesNumericDraft = true;
   S.drafts = { ...S.drafts, [key]: raw };
-  if (raw.trim() === "" && opts.optional) {
-    apply(undefined);
-    return;
-  }
-  if (opts.infinity && /^inf(inity)?$/i.test(raw.trim())) {
-    apply("Infinity");
-    return;
-  }
-  const v = Number(raw);
-  if (Number.isFinite(v)) apply(v);
+  const value = numericDraftValue(raw, opts);
+  if (value === null) return;
+  apply(value);
 }
 
 function num(apply: (v: number) => void): NumApply {
@@ -3457,6 +3440,7 @@ function num(apply: (v: number) => void): NumApply {
 }
 
 function applyField(key: string, raw: string): boolean {
+  currentInputUsesNumericDraft = false;
   const durUnitFactor = { fs: 1e-15, ps: 1e-12, ns: 1e-9 }[S.pulseDurUnit];
   // dynamic optimizer lens rows
   const lensMatch = /^ol-(id|f|ap)-(\d+)$/.exec(key);
@@ -3950,14 +3934,22 @@ function updateRoiHoverCursor(event: PointerEvent): void {
     canvas.style.cursor = roiCursor(hit?.hit ?? "create");
     return;
   }
-  const draft = draftRoiRect();
-  const editable = draft && roiBoundaryVisible(draft, view) ? draft : null;
-  if (!pt || !editable) {
+  if (!pt) {
     canvas.style.cursor = "crosshair";
     return;
   }
-  const hit = hitRoiEdit(editable, pt, roiEditHitPx(canvas, view), S.img.width, S.img.height, "roi");
-  canvas.style.cursor = roiCursor(hit ?? "create");
+  const draft = draftRoiRect();
+  const editable = draft && roiBoundaryVisible(draft, view) ? draft : null;
+  const action = resolveIdleImagePointerAction({
+    bgMethod: S.img.bgMethod,
+    userBgRects: S.img.bgRects,
+    roi: editable,
+    point: pt,
+    hitPx: roiEditHitPx(canvas, view),
+    imageWidth: S.img.width,
+    imageHeight: S.img.height,
+  });
+  canvas.style.cursor = roiCursor(idlePointerCursor(action));
 }
 
 function onRoiPointerDown(event: PointerEvent): void {
@@ -3970,11 +3962,12 @@ function onRoiPointerDown(event: PointerEvent): void {
   const pt = canvasClientToImagePx(canvas, event.clientX, event.clientY, view);
   if (!pt) return;
   blurFocusedRoiInput();
-  const target = normalizeImageDrawTarget(S.img.drawTarget, S.img.bgMethod);
+  const normalized = normalizeImageDrawTarget(S.img.drawTarget, S.img.bgMethod);
+  let target: ImageDrawTarget = normalized;
   let editable: OverlayRect | null = null;
   let hit: RoiHandle | "move" | null = null;
   let bgRectIndex: number | null = null;
-  if (target === "bg-rect") {
+  if (normalized === "bg-rect") {
     const bgHit = hitBgRectEdit(pt, roiEditHitPx(canvas, view), S.img.width, S.img.height);
     if (bgHit) {
       editable = bgHit.rect;
@@ -3987,8 +3980,32 @@ function onRoiPointerDown(event: PointerEvent): void {
     }
   } else {
     const draft = draftRoiRect();
-    editable = draft && roiBoundaryVisible(draft, view) ? draft : null;
-    hit = editable ? hitRoiEdit(editable, pt, roiEditHitPx(canvas, view), S.img.width, S.img.height, "roi") : null;
+    const roi = draft && roiBoundaryVisible(draft, view) ? draft : null;
+    const action = resolveIdleImagePointerAction({
+      bgMethod: S.img.bgMethod,
+      userBgRects: S.img.bgRects,
+      roi,
+      point: pt,
+      hitPx: roiEditHitPx(canvas, view),
+      imageWidth: S.img.width,
+      imageHeight: S.img.height,
+    });
+    if (action.kind === "bg-rect") {
+      editable = action.rect;
+      hit = action.hit;
+      bgRectIndex = action.index;
+      target = "bg-rect";
+      if (S.img.activeBgRectIndex !== action.index) {
+        S.img = { ...S.img, activeBgRectIndex: action.index };
+        refreshImageOverlay();
+      }
+    } else if (action.kind === "roi-resize") {
+      editable = action.rect;
+      hit = action.handle;
+    } else if (action.kind === "roi-move") {
+      editable = action.rect;
+      hit = "move";
+    }
   }
   const kind: RoiDragKind = hit === "move" ? "move" : hit ? "resize" : "create";
   event.preventDefault();
@@ -4175,7 +4192,9 @@ app.addEventListener("input", (event) => {
   if (!(target instanceof HTMLInputElement || target instanceof HTMLTextAreaElement)) return;
   const key = target.dataset.k;
   if (!key) return;
-  if (applyField(key, target.value)) rerender();
+  if (!applyField(key, target.value)) return;
+  if (currentInputUsesNumericDraft) deferNumericDraftRerender();
+  else rerender();
 });
 
 app.addEventListener("change", (event) => {
@@ -4197,6 +4216,7 @@ app.addEventListener("change", (event) => {
 app.addEventListener("focusout", (event) => {
   const target = event.target as HTMLElement | null;
   if (!target?.dataset?.blur) return;
+  cancelDeferredNumericDraftRerender();
   if (Object.keys(S.drafts).length === 0 && !S.copied) return;
   S.drafts = {};
   S.copied = false;

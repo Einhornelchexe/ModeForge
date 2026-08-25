@@ -2203,3 +2203,136 @@ test("S20 stage F: a runaway converged fit reports geometryReleasable false", ()
   assert.equal(result.fits.gauss2d.geometryReleasable, false);
   assert.ok(!result.fits.physical, "no physical geometry is derived from an unreleasable geometry");
 });
+
+// ---------------------------------------------------------------------------
+// S23 — background-reference overlap visibility.
+// ---------------------------------------------------------------------------
+
+test("S23: an applied background reference rectangle that overlaps the D4sigma beam ellipse is reported", () => {
+  const width = 160;
+  const height = 160;
+  // A 44 px top-left reference box reaches the D4sigma ellipse of this beam;
+  // the six-sigma release check still fits inside the full image, so this is a
+  // released stage-B case rather than only a fit fallback.
+  const pixels = gaussian2dPixels(width, height, 50, 50, 8, 5, 0, 1000, 10);
+  const cornerRects = [
+    { x0: 0, y0: 0, width: 44, height: 44 },
+    { x0: 116, y0: 0, width: 44, height: 44 },
+    { x0: 0, y0: 116, width: 44, height: 44 },
+    { x0: 116, y0: 116, width: 44, height: 44 },
+  ];
+  const result = analyzeImage({
+    pixels,
+    width,
+    height,
+    dtype: "float32",
+    background: { method: "rect-median", rects: cornerRects },
+  });
+
+  assert.equal(result.background.method, "rect-median");
+  assert.equal(result.moments.suppressionReason, null);
+  const overlap = warningsWithCode(result.warnings, "IMAGE_BEAM_IN_BACKGROUND_REFERENCE");
+  assert.equal(overlap.length, 1);
+  assert.equal(overlap[0].severity, "info");
+  assert.equal(
+    overlap[0].message,
+    "A background reference rectangle intersects the beam's 4-sigma ellipse; the background model may contain beam power.",
+  );
+
+  // The automatic method resolves to robust-plane corner boxes before the
+  // check, and those resolved boxes are the reference geometry it must use.
+  const autoPixels = gaussian2dPixels(width, height, 20, 20, 3, 2, 0, 1000, 10);
+  const automatic = analyzeImage({ pixels: autoPixels, width, height, dtype: "float32", background: { method: "auto" } });
+  assert.equal(automatic.background.method, "robust-plane");
+  assert.ok(automatic.background.resolvedRects !== undefined);
+  assert.equal(warningsWithCode(automatic.warnings, "IMAGE_BEAM_IN_BACKGROUND_REFERENCE").length, 1);
+});
+
+test("S23: background-reference overlap stays silent for clean, non-rectangle, and no-fit cases", () => {
+  const width = 160;
+  const height = 160;
+  const cleanPixels = gaussian2dPixels(width, height, 80, 80, 9, 6, 0, 1000, 10);
+  const cleanCornerRects = [
+    { x0: 0, y0: 0, width: 16, height: 16 },
+    { x0: 144, y0: 0, width: 16, height: 16 },
+    { x0: 0, y0: 144, width: 16, height: 16 },
+    { x0: 144, y0: 144, width: 16, height: 16 },
+  ];
+
+  for (const method of ["rect-median", "robust-plane"] as const) {
+    const result = analyzeImage({
+      pixels: cleanPixels,
+      width,
+      height,
+      dtype: "float32",
+      background: { method, rects: cleanCornerRects },
+    });
+    assert.equal(result.background.method, method);
+    assert.equal(warningsWithCode(result.warnings, "IMAGE_BEAM_IN_BACKGROUND_REFERENCE").length, 0, method);
+  }
+
+  const darkPixels = new Array<number>(width * height).fill(10);
+  const noReferenceConfigs = [
+    { method: "none" } as const,
+    { method: "manual-offset", offsetCounts: 10 } as const,
+    { method: "dark-frame", darkPixels, darkWidth: width, darkHeight: height, darkDtype: "float32" } as const,
+  ];
+  for (const background of noReferenceConfigs) {
+    const result = analyzeImage({ pixels: cleanPixels, width, height, dtype: "float32", background });
+    assert.equal(warningsWithCode(result.warnings, "IMAGE_BEAM_IN_BACKGROUND_REFERENCE").length, 0, background.method);
+  }
+
+  // The rectangle model really applies, but a flat scene suppresses stage B
+  // and the Gaussian fit does not converge. With no reliable ellipse, the
+  // reference-overlap warning must not guess.
+  const flat = analyzeImage({
+    pixels: new Array<number>(width * height).fill(10),
+    width,
+    height,
+    dtype: "float32",
+    background: { method: "rect-median", rects: cleanCornerRects },
+  });
+  assert.equal(flat.background.method, "rect-median");
+  assert.notEqual(flat.moments.suppressionReason, null);
+  assert.notEqual(flat.fits.gauss2d.status, "converged");
+  assert.equal(warningsWithCode(flat.warnings, "IMAGE_BEAM_IN_BACKGROUND_REFERENCE").length, 0);
+});
+
+test("S23: background-reference overlap follows the rotated major axis and catches a long-edge crossing", () => {
+  const width = 160;
+  const height = 160;
+  const pixels = gaussian2dPixels(width, height, 80, 80, 10, 3, Math.PI / 4, 1000, 10);
+
+  // At theta = pi/4 this box lies on the positive rotated major axis. Its
+  // counterpart reflected across the horizontal image centre lies beyond the
+  // narrow rotated minor axis, pinning pointIsInsideEllipse's sign convention.
+  const alongMajor = analyzeImage({
+    pixels,
+    width,
+    height,
+    dtype: "float32",
+    background: { method: "rect-median", rects: [{ x0: 92, y0: 92, width: 4, height: 4 }] },
+  });
+  assert.equal(warningsWithCode(alongMajor.warnings, "IMAGE_BEAM_IN_BACKGROUND_REFERENCE").length, 1);
+  const mirroredMinor = analyzeImage({
+    pixels,
+    width,
+    height,
+    dtype: "float32",
+    background: { method: "rect-median", rects: [{ x0: 92, y0: 64, width: 4, height: 4 }] },
+  });
+  assert.equal(warningsWithCode(mirroredMinor.warnings, "IMAGE_BEAM_IN_BACKGROUND_REFERENCE").length, 0);
+
+  // This one-pixel-high reference edge crosses a small, horizontal ellipse in
+  // its middle. Eight fixed samples land at x = 57, 114, ..., 455 and all
+  // miss its x = 238..262 crossing; the exact segment quadratic must fire.
+  const longPixels = gaussian2dPixels(512, height, 250, 80, 12, 4, 0, 1000, 10);
+  const longEdge = analyzeImage({
+    pixels: longPixels,
+    width: 512,
+    height,
+    dtype: "float32",
+    background: { method: "rect-median", rects: [{ x0: 0, y0: 87, width: 512, height: 1 }] },
+  });
+  assert.equal(warningsWithCode(longEdge.warnings, "IMAGE_BEAM_IN_BACKGROUND_REFERENCE").length, 1);
+});

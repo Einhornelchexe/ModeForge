@@ -66,6 +66,7 @@ export type {
   PulseInput,
   PulseResult,
   SimulationWarning,
+  SimulationWarningCode,
   ValidationResult,
   WaistResult,
 } from "../../core/src/index.ts";

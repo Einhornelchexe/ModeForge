@@ -833,6 +833,142 @@ function fitGeometryIsReleasable(params: Gauss2dFitParams, roi: BackgroundRect):
   return true;
 }
 
+type BeamEllipse = {
+  centerXPx: number;
+  centerYPx: number;
+  semiMajorPx: number;
+  semiMinorPx: number;
+  thetaRad: number;
+};
+
+// D4sigma is a diameter, so its displayed 4-sigma ellipse has semi axes of
+// half the reported D4 values. The same geometry is used for the released
+// stage-B result and the converged-fit fallback below.
+function d4SigmaEllipse(
+  centerXPx: number | null,
+  centerYPx: number | null,
+  d4SigmaMajorPx: number | null,
+  d4SigmaMinorPx: number | null,
+  thetaRad: number | null,
+): BeamEllipse | null {
+  if (
+    centerXPx === null ||
+    centerYPx === null ||
+    d4SigmaMajorPx === null ||
+    d4SigmaMinorPx === null ||
+    thetaRad === null ||
+    !Number.isFinite(centerXPx) ||
+    !Number.isFinite(centerYPx) ||
+    !Number.isFinite(d4SigmaMajorPx) ||
+    !Number.isFinite(d4SigmaMinorPx) ||
+    !Number.isFinite(thetaRad) ||
+    !(d4SigmaMajorPx > 0) ||
+    !(d4SigmaMinorPx > 0)
+  ) {
+    return null;
+  }
+  return {
+    centerXPx,
+    centerYPx,
+    semiMajorPx: d4SigmaMajorPx / 2,
+    semiMinorPx: d4SigmaMinorPx / 2,
+    thetaRad,
+  };
+}
+
+function pointIsInsideEllipse(x: number, y: number, ellipse: BeamEllipse): boolean {
+  const cos = Math.cos(ellipse.thetaRad);
+  const sin = Math.sin(ellipse.thetaRad);
+  const dx = x - ellipse.centerXPx;
+  const dy = y - ellipse.centerYPx;
+  const major = dx * cos + dy * sin;
+  const minor = -dx * sin + dy * cos;
+  return (
+    (major * major) / (ellipse.semiMajorPx * ellipse.semiMajorPx) +
+      (minor * minor) / (ellipse.semiMinorPx * ellipse.semiMinorPx) <=
+    1
+  );
+}
+
+function segmentIntersectsEllipse(
+  x0: number,
+  y0: number,
+  x1: number,
+  y1: number,
+  ellipse: BeamEllipse,
+): boolean {
+  // Transform the segment into the ellipse's major/minor coordinate system.
+  // The unit-circle equation then gives a quadratic in segment parameter t.
+  const cos = Math.cos(ellipse.thetaRad);
+  const sin = Math.sin(ellipse.thetaRad);
+  const dx = x0 - ellipse.centerXPx;
+  const dy = y0 - ellipse.centerYPx;
+  const major0 = dx * cos + dy * sin;
+  const minor0 = -dx * sin + dy * cos;
+  const stepX = x1 - x0;
+  const stepY = y1 - y0;
+  const majorStep = stepX * cos + stepY * sin;
+  const minorStep = -stepX * sin + stepY * cos;
+  const invMajor2 = 1 / (ellipse.semiMajorPx * ellipse.semiMajorPx);
+  const invMinor2 = 1 / (ellipse.semiMinorPx * ellipse.semiMinorPx);
+  const a = majorStep * majorStep * invMajor2 + minorStep * minorStep * invMinor2;
+  const b = 2 * (major0 * majorStep * invMajor2 + minor0 * minorStep * invMinor2);
+  const c = major0 * major0 * invMajor2 + minor0 * minor0 * invMinor2 - 1;
+  if (c <= 0) return true;
+  if (!(a > 0)) return false;
+  const discriminant = b * b - 4 * a * c;
+  if (discriminant < 0) return false;
+  const root = Math.sqrt(discriminant);
+  const t0 = (-b - root) / (2 * a);
+  const t1 = (-b + root) / (2 * a);
+  return t0 <= 1 && t1 >= 0;
+}
+
+// The prefilter avoids work for the ordinary case of background boxes far from
+// the beam. A box containing the ellipse centre intersects immediately;
+// otherwise it tests all corners, then each finite edge with the exact
+// segment/ellipse quadratic. This catches a small ellipse crossing the middle
+// of a long edge without a sampling-density heuristic.
+function backgroundRectIntersectsEllipse(rect: BackgroundRect, ellipse: BeamEllipse): boolean {
+  const cos = Math.cos(ellipse.thetaRad);
+  const sin = Math.sin(ellipse.thetaRad);
+  const extentX = Math.hypot(ellipse.semiMajorPx * cos, ellipse.semiMinorPx * sin);
+  const extentY = Math.hypot(ellipse.semiMajorPx * sin, ellipse.semiMinorPx * cos);
+  const x1 = rect.x0 + rect.width - 1;
+  const y1 = rect.y0 + rect.height - 1;
+  if (
+    x1 < ellipse.centerXPx - extentX ||
+    rect.x0 > ellipse.centerXPx + extentX ||
+    y1 < ellipse.centerYPx - extentY ||
+    rect.y0 > ellipse.centerYPx + extentY
+  ) {
+    return false;
+  }
+  if (
+    ellipse.centerXPx >= rect.x0 &&
+    ellipse.centerXPx <= x1 &&
+    ellipse.centerYPx >= rect.y0 &&
+    ellipse.centerYPx <= y1
+  ) {
+    return true;
+  }
+
+  const corners: Array<[number, number]> = [
+    [rect.x0, rect.y0],
+    [x1, rect.y0],
+    [rect.x0, y1],
+    [x1, y1],
+  ];
+  if (corners.some(([x, y]) => pointIsInsideEllipse(x, y, ellipse))) return true;
+
+  return (
+    segmentIntersectsEllipse(rect.x0, rect.y0, x1, rect.y0, ellipse) ||
+    segmentIntersectsEllipse(x1, rect.y0, x1, y1, ellipse) ||
+    segmentIntersectsEllipse(x1, y1, rect.x0, y1, ellipse) ||
+    segmentIntersectsEllipse(rect.x0, y1, rect.x0, rect.y0, ellipse)
+  );
+}
+
 // S20 stage F (F7): orientation contrast on a PHYSICALLY mapped geometry.
 //
 // moments.ts computes q = (lambdaMajor - lambdaMinor) / (lambdaMajor +
@@ -1547,6 +1683,50 @@ export function analyzeImage(input: ImageAnalysisInput): ImageAnalysisResult {
     releasedMoments.d4SigmaMinorPx > 0
       ? releasedMoments
       : null;
+
+  // S23: a rectangle-based background model is only honest when its reference
+  // samples stay clear of the beam. `backgroundSection.method` is the model
+  // that actually ran (not merely the requested one), while backgroundConfig
+  // carries its resolved rectangle set, including the automatic corner boxes.
+  // A released stage-B D4 ellipse wins; otherwise a converged, ROI-plausible
+  // Gaussian fit supplies the same D4 geometry. No usable geometry means no
+  // warning rather than a positional guess.
+  const backgroundReferenceRects =
+    backgroundSection.method === backgroundConfig.method &&
+    (backgroundConfig.method === "rect-median" || backgroundConfig.method === "robust-plane")
+      ? backgroundConfig.rects
+      : null;
+  const backgroundReferenceBeamEllipse =
+    releasedStageB !== null
+      ? d4SigmaEllipse(
+          releasedStageB.centroidXPx,
+          releasedStageB.centroidYPx,
+          releasedStageB.d4SigmaMajorPx,
+          releasedStageB.d4SigmaMinorPx,
+          releasedStageB.thetaRad,
+        )
+      : gaussFit.status === "converged" && gaussFit.params !== null && fitGeometryIsReleasable(gaussFit.params, roi)
+        ? d4SigmaEllipse(
+            gaussFit.params.centerXPx,
+            gaussFit.params.centerYPx,
+            4 * gaussFit.params.sigmaMajorPx,
+            4 * gaussFit.params.sigmaMinorPx,
+            gaussFit.params.thetaRad,
+          )
+        : null;
+  if (
+    backgroundReferenceRects !== null &&
+    backgroundReferenceBeamEllipse !== null &&
+    backgroundReferenceRects.some((rect) => backgroundRectIntersectsEllipse(rect, backgroundReferenceBeamEllipse))
+  ) {
+    honestyWarnings.push(
+      warning(
+        "IMAGE_BEAM_IN_BACKGROUND_REFERENCE",
+        "A background reference rectangle intersects the beam's 4-sigma ellipse; the background model may contain beam power.",
+        "info",
+      ),
+    );
+  }
 
   // F1 (a) absorbed-power wing detector (measured in aperture.ts).
   const absorbed = aperture.absorbedPower;

@@ -493,6 +493,87 @@
   letter-spacing: 0.02em;
 }
 
+.mf-info {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  max-width: 100%;
+}
+
+.mf-info-label {
+  min-width: 0;
+}
+
+.mf-info-anchor {
+  position: relative;
+  display: inline-flex;
+  flex: none;
+}
+
+.mf-info-glyph {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 14px;
+  height: 14px;
+  border: 1px solid #8b94a3;
+  border-radius: 50%;
+  font: 600 9px "IBM Plex Mono", ui-monospace, monospace;
+  color: #8b94a3;
+  letter-spacing: 0;
+  text-transform: none;
+  line-height: 1;
+  cursor: help;
+  user-select: none;
+}
+
+.mf-info-glyph:focus {
+  outline: 1px solid #6fa8f5;
+  outline-offset: 2px;
+}
+
+.mf-info-panel {
+  display: none;
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 0;
+  z-index: 80;
+  box-sizing: border-box;
+  width: max-content;
+  max-width: min(340px, calc(100vw - 40px));
+  padding: 10px 12px;
+  background: linear-gradient(180deg, #131926 0%, #0e141d 100%);
+  border: 1px solid #1d2634;
+  border-radius: 12px;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.035), 0 16px 32px -24px rgba(0, 0, 0, 0.9);
+  font: 400 12px "Space Grotesk", sans-serif;
+  color: #c5cdd8;
+  letter-spacing: 0;
+  text-transform: none;
+  line-height: 1.45;
+  white-space: normal;
+  pointer-events: none;
+}
+
+/* The right-hand result tiles need their popovers to grow back into the
+   center column, never out of it. */
+.img-tiles .result-tile:nth-child(even) .mf-info-panel {
+  right: 0;
+  left: auto;
+}
+
+.mf-info:hover .mf-info-panel,
+.mf-info:focus-within .mf-info-panel {
+  display: block;
+}
+
+.result-tile:has(.mf-info:hover),
+.result-tile:has(.mf-info:focus-within) {
+  position: relative;
+  z-index: 5;
+}
+
 .img-canvas {
   display: block;
   margin: 0 auto;
